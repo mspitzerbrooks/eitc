@@ -183,4 +183,4 @@ label define filestat_2_lbl 5 `"Single"', add
 label define filestat_2_lbl 6 `"Nonfiler"', add
 label values filestat_2 filestat_2_lbl
 
-save cps00001.dta
+save "/Users/matthewspitzer/Desktop/EITC/Intermediate/cps00001.dta"

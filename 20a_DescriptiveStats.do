@@ -51,4 +51,4 @@ forval i = 1/2{
 tab filestat_1
 tab filestat_2
 
-save "/Users/matthewspitzer/Desktop/EITC/Intermediate/cps00001_constructs.dta"
+save "/Users/matthewspitzer/Desktop/EITC/Intermediate/cps00001_constructs.dta", replace

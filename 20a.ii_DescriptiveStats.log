@@ -1,0 +1,83 @@
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  /Users/matthewspitzer/Desktop/EITC/Programs/20a.ii_DescriptiveStats.log
+  log type:  text
+ opened on:  20 Apr 2023, 14:14:40
+
+. 
+. // bring in data
+. use "/Users/matthewspitzer/Desktop/EITC/Intermediate/cps00002.dta", clear
+
+. 
+. // create variable to answer:
+. /* How many people are there who in 1992 
+> (a) filed taxes (i.e. where not non-filers) and 
+> (b) received zero EITC but in 1993 (c ) did receive EITC */
+. 
+. *count if filestat != 6 & eitc == 0
+. 
+. foreach year in 1992 1993 {
+  2.         gen temp = 1 if year == `year'
+  3.         bysort cpsid : egen in_`year' = min(temp)
+  4.         drop temp
+  5. }
+(1047501 missing values generated)
+(862638 missing values generated)
+(1048100 missing values generated)
+(863840 missing values generated)
+
+. tablist in_1992 in_1993, s(v)
+
+  +---------------------------------------------------------+
+  | in_1992   in_1993   _Freq_   _Perc_   _CFreq_   _CPerc_ |
+  |---------------------------------------------------------|
+  |       1         1   194680    16.18    194680     16.18 |
+  |       1         .   145979    12.13    340659     28.31 |
+  |       .         1   144777    12.03    485436     40.34 |
+  |       .         .   717861    59.66   1203297    100.00 |
+  +---------------------------------------------------------+
+
+. 
+. distinct cpsid
+
+       |        Observations
+       |      total   distinct
+-------+----------------------
+ cpsid |    1203297     304629
+
+. distinct cpsid if in_1992==1 & in_1993==1
+
+       |        Observations
+       |      total   distinct
+-------+----------------------
+ cpsid |     194680      21943
+
+. 
+. // new
+. gen received_eitc = 1 if eitcred > 0 & eitcred < 9999
+(1166979 missing values generated)
+
+. 
+. // old
+. foreach year in 1992 1993 1994 {
+  2.         bysort cpsid year : egen received_eitc_in`year' = min(received_eitc)
+  3. }
+(1035574 missing values generated)
+(1035574 missing values generated)
+(1035574 missing values generated)
+
+. 
+. tablist received_eitc_in*, s(v)
+
+  +-----------------------------------------------------------------------+
+  | rec~1992   rec~1993   rec~1994    _Freq_   _Perc_   _CFreq_   _CPerc_ |
+  |-----------------------------------------------------------------------|
+  |        1          1          1    167723    13.94    167723     13.94 |
+  |        .          .          .   1035574    86.06   1203297    100.00 |
+  +-----------------------------------------------------------------------+
+
+. exit
+
+end of do-file
+
+
