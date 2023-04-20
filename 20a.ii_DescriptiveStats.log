@@ -81,3 +81,102 @@
 end of do-file
 
 
+. tab received_eitc
+
+received_ei |
+         tc |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          1 |     36,318      100.00      100.00
+------------+-----------------------------------
+      Total |     36,318      100.00
+
+. tab received_eitc,m
+
+received_ei |
+         tc |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          1 |     36,318        3.02        3.02
+          . |  1,166,979       96.98      100.00
+------------+-----------------------------------
+      Total |  1,203,297      100.00
+
+. distinct cpsid if received_eitc==1
+
+       |        Observations
+       |      total   distinct
+-------+----------------------
+ cpsid |      36318      27559
+
+. distinct cpsid
+
+       |        Observations
+       |      total   distinct
+-------+----------------------
+ cpsid |    1203297     304629
+
+. gen eitc_amnt==.
+== invalid name
+r(198);
+
+. gen eitc_amnt=.
+(1203297 missing values generated)
+
+. replace eitc_amnt= eitcred if  eitcred<9999 & 
+invalid syntax
+r(198);
+
+. replace eitc_amnt= eitcred if  eitcred<9999 & eitcred>0
+(36318 real changes made)
+
+. gen eitc_in_92 if  eitc_amnt!=. & year==1992
+=exp required
+r(100);
+
+. gen eitc_in_92=1 if  eitc_amnt!=. & year==1992
+(1196881 missing values generated)
+
+. gen eitc_in_93=1 if  eitc_amnt!=. & year==1993
+(1196647 missing values generated)
+
+. gen eitc_in_94=1 if  eitc_amnt!=. & year==1994
+(1196720 missing values generated)
+
+. corr  received_eitc_in1992 received_eitc_in1993 received_eitc_in1994 eitc_in_92 eitc_in_93 eitc_in_94
+no observations
+r(2000);
+
+. br  eitcred received_eitc_in1992 received_eitc_in1993 received_eitc_in1994 eitc_in_92 eitc_in_93 eitc_in_94
+
+. br  eitc_amnt received_eitc_in1992 received_eitc_in1993 received_eitc_in1994 eitc_in_92 eitc_in_93 eitc_in_94
+
+. sort  eitc_amnt
+
+. sort cpsid eitc_amnt
+
+. sort cpsid eitc_amnt year
+
+. sort cpsid year
+
+. preserve
+
+. drop if pernum >1
+(746201 observations deleted)
+
+. sort cpsid year
+
+. isid cpsid
+variable cpsid does not uniquely identify the observations
+r(459);
+
+. duplicates report cpsid
+
+Duplicates in terms of cpsid
+
+--------------------------------------
+   copies | observations       surplus
+----------+---------------------------
+        1 |       176137             0
+        2 |       256982        128491
+    23977 |        23977         23976
+--------------------------------------
+
