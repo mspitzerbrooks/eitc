@@ -2,186 +2,187 @@
       name:  <unnamed>
        log:  /Users/matthewspitzer/Desktop/EITC/Programs/20a.ii_DescriptiveStats.log
   log type:  text
- opened on:  20 Apr 2023, 14:14:40
+ opened on:  26 Apr 2023, 12:09:42
 
 . 
 . // bring in data
 . use "/Users/matthewspitzer/Desktop/EITC/Intermediate/cps00002.dta", clear
 
 . 
+. // clean missing values
+. mvdecode _all, mv(9999)
+      serial: 11 missing values generated
+     eitcred: 174673 missing values generated
+eitcred_head: 4 missing values generated
+eitcred_mom2: 2 missing values generated
+
+. 
 . // create variable to answer:
-. /* How many people are there who in 1992 
-> (a) filed taxes (i.e. where not non-filers) and 
-> (b) received zero EITC but in 1993 (c ) did receive EITC */
+. /* How many people are there such that:
+> (a) in 1992, filed taxes (i.e. were not non-filers) and did not receive EITC
+> (b) in 1993, filed and received some non-zero amount of EITC */
 . 
-. *count if filestat != 6 & eitc == 0
+. /* plan:
+> clean missing values
+> create year variable with just last two digits
+> reshape the data wide, using this year variable
+> only keep the following variables: cpsid filestat eitc
+> now data will be at cpsid (household) level
+> create four variables:
+> - filed 1992 dummy
+> - filed 1993 dummy
+> - nonzero EITC 1992 dummy
+> - nonzero EITC 1993 dummy
+> tabulate these four
+> */
 . 
-. foreach year in 1992 1993 {
-  2.         gen temp = 1 if year == `year'
-  3.         bysort cpsid : egen in_`year' = min(temp)
-  4.         drop temp
-  5. }
-(1047501 missing values generated)
-(862638 missing values generated)
-(1048100 missing values generated)
-(863840 missing values generated)
-
-. tablist in_1992 in_1993, s(v)
-
-  +---------------------------------------------------------+
-  | in_1992   in_1993   _Freq_   _Perc_   _CFreq_   _CPerc_ |
-  |---------------------------------------------------------|
-  |       1         1   194680    16.18    194680     16.18 |
-  |       1         .   145979    12.13    340659     28.31 |
-  |       .         1   144777    12.03    485436     40.34 |
-  |       .         .   717861    59.66   1203297    100.00 |
-  +---------------------------------------------------------+
+. // keep only variables needed
+. keep cpsidp year filestat eitcred
 
 . 
-. distinct cpsid
+. // make sure only one person per year
+. drop if cpsidp == 0 // figure out what exactly this means
+(80253 observations deleted)
 
-       |        Observations
-       |      total   distinct
--------+----------------------
- cpsid |    1203297     304629
-
-. distinct cpsid if in_1992==1 & in_1993==1
-
-       |        Observations
-       |      total   distinct
--------+----------------------
- cpsid |     194680      21943
+. isid cpsidp year
 
 . 
-. // new
-. gen received_eitc = 1 if eitcred > 0 & eitcred < 9999
-(1166979 missing values generated)
+. // create 2 digit year variable
+. tostring year, replace
+year was int now str4
+
+. gen year_2 = substr(year,3,2)
+
+. destring year_2, replace
+year_2 has all characters numeric; replaced as byte
+
+. drop year
+
+. rename year_2 year
+
+. tab year
+
+       year |      Freq.     Percent        Cum.
+------------+-----------------------------------
+         89 |    137,384       12.23       12.23
+         90 |    148,730       13.24       25.48
+         91 |    148,228       13.20       38.68
+         92 |    145,355       12.94       51.62
+         93 |    144,618       12.88       64.50
+         94 |    140,625       12.52       77.02
+         95 |    137,921       12.28       89.30
+         96 |    120,183       10.70      100.00
+------------+-----------------------------------
+      Total |  1,123,044      100.00
+
+. keep if inlist(year,92,93) // only these two years for now, can expand later
+(833071 observations deleted)
 
 . 
-. // old
-. foreach year in 1992 1993 1994 {
-  2.         bysort cpsid year : egen received_eitc_in`year' = min(received_eitc)
-  3. }
-(1035574 missing values generated)
-(1035574 missing values generated)
-(1035574 missing values generated)
+. // reshape wide
+. reshape wide filestat eitcred, i(cpsidp) j(year)
+(note: j = 92 93)
+
+Data                               long   ->   wide
+-----------------------------------------------------------------------------
+Number of obs.                   289973   ->  235849
+Number of variables                   4   ->       5
+j variable (2 values)              year   ->   (dropped)
+xij variables:
+                               filestat   ->   filestat92 filestat93
+                                eitcred   ->   eitcred92 eitcred93
+-----------------------------------------------------------------------------
+
+. isid cpsid
 
 . 
-. tablist received_eitc_in*, s(v)
+. // now create dummies
+. 
+.         // filed in 1992 
+.         gen filed92 = 0
 
-  +-----------------------------------------------------------------------+
-  | rec~1992   rec~1993   rec~1994    _Freq_   _Perc_   _CFreq_   _CPerc_ |
-  |-----------------------------------------------------------------------|
-  |        1          1          1    167723    13.94    167723     13.94 |
-  |        .          .          .   1035574    86.06   1203297    100.00 |
-  +-----------------------------------------------------------------------+
+.         replace filed92 = 1 if filestat92 != 6 & !mi(filestat92)
+(93848 real changes made)
 
+.         tab filed92,m
+
+    filed92 |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          0 |    142,001       60.21       60.21
+          1 |     93,848       39.79      100.00
+------------+-----------------------------------
+      Total |    235,849      100.00
+
+.         
+.         // filed in 1993
+.         gen filed93 = 0
+
+.         replace filed93 = 1 if filestat93 != 6 & !mi(filestat92)
+(126905 real changes made)
+
+.         tab filed93,m
+
+    filed93 |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          0 |    108,944       46.19       46.19
+          1 |    126,905       53.81      100.00
+------------+-----------------------------------
+      Total |    235,849      100.00
+
+.         
+.         // nonzero EITC in 1992
+.         gen eitcpos92 = 0
+
+.         replace eitcpos92 = 1 if eitcred92>0 & !mi(eitcred92)
+(5652 real changes made)
+
+.         tab eitcpos92,m
+
+  eitcpos92 |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          0 |    230,197       97.60       97.60
+          1 |      5,652        2.40      100.00
+------------+-----------------------------------
+      Total |    235,849      100.00
+
+.         
+.         // nonzero EITC in 1993
+.         gen eitcpos93 = 0
+
+.         replace eitcpos93 = 1 if eitcred93>0 & !mi(eitcred93)
+(5861 real changes made)
+
+.         tab eitcpos93,m
+
+  eitcpos93 |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          0 |    229,988       97.51       97.51
+          1 |      5,861        2.49      100.00
+------------+-----------------------------------
+      Total |    235,849      100.00
+
+.         
+. // keep only people who filed in both years
+. keep if filed92 == 1 & filed93 == 1
+(143965 observations deleted)
+
+. 
+. // now tabulate receiving EITC in both years
+. tablist eitcpos92 eitcpos93, s(v)       
+
+  +-----------------------------------------------------------+
+  | eitcp~92   eitcp~93   _Freq_   _Perc_   _CFreq_   _CPerc_ |
+  |-----------------------------------------------------------|
+  |        0          0    85691    93.26     85691     93.26 |
+  |        0          1      673     0.73     86364     93.99 |
+  |        1          0     4378     4.76     90742     98.76 |
+  |        1          1     1142     1.24     91884    100.00 |
+  +-----------------------------------------------------------+
+
+.         
 . exit
 
 end of do-file
 
-
-. tab received_eitc
-
-received_ei |
-         tc |      Freq.     Percent        Cum.
-------------+-----------------------------------
-          1 |     36,318      100.00      100.00
-------------+-----------------------------------
-      Total |     36,318      100.00
-
-. tab received_eitc,m
-
-received_ei |
-         tc |      Freq.     Percent        Cum.
-------------+-----------------------------------
-          1 |     36,318        3.02        3.02
-          . |  1,166,979       96.98      100.00
-------------+-----------------------------------
-      Total |  1,203,297      100.00
-
-. distinct cpsid if received_eitc==1
-
-       |        Observations
-       |      total   distinct
--------+----------------------
- cpsid |      36318      27559
-
-. distinct cpsid
-
-       |        Observations
-       |      total   distinct
--------+----------------------
- cpsid |    1203297     304629
-
-. gen eitc_amnt==.
-== invalid name
-r(198);
-
-. gen eitc_amnt=.
-(1203297 missing values generated)
-
-. replace eitc_amnt= eitcred if  eitcred<9999 & 
-invalid syntax
-r(198);
-
-. replace eitc_amnt= eitcred if  eitcred<9999 & eitcred>0
-(36318 real changes made)
-
-. gen eitc_in_92 if  eitc_amnt!=. & year==1992
-=exp required
-r(100);
-
-. gen eitc_in_92=1 if  eitc_amnt!=. & year==1992
-(1196881 missing values generated)
-
-. gen eitc_in_93=1 if  eitc_amnt!=. & year==1993
-(1196647 missing values generated)
-
-. gen eitc_in_94=1 if  eitc_amnt!=. & year==1994
-(1196720 missing values generated)
-
-. corr  received_eitc_in1992 received_eitc_in1993 received_eitc_in1994 eitc_in_92 eitc_in_93 eitc_in_94
-no observations
-r(2000);
-
-. br  eitcred received_eitc_in1992 received_eitc_in1993 received_eitc_in1994 eitc_in_92 eitc_in_93 eitc_in_94
-
-. br  eitc_amnt received_eitc_in1992 received_eitc_in1993 received_eitc_in1994 eitc_in_92 eitc_in_93 eitc_in_94
-
-. sort  eitc_amnt
-
-. sort cpsid eitc_amnt
-
-. sort cpsid eitc_amnt year
-
-. sort cpsid year
-
-. preserve
-
-. drop if pernum >1
-(746201 observations deleted)
-
-. sort cpsid year
-
-. isid cpsid
-variable cpsid does not uniquely identify the observations
-r(459);
-
-. duplicates report cpsid
-
-Duplicates in terms of cpsid
-
---------------------------------------
-   copies | observations       surplus
-----------+---------------------------
-        1 |       176137             0
-        2 |       256982        128491
-    23977 |        23977         23976
---------------------------------------
-
-. exit
-no; data in memory would be lost
-r(4);
 
 . exit, clear
