@@ -180,3 +180,8 @@ Duplicates in terms of cpsid
     23977 |        23977         23976
 --------------------------------------
 
+. exit
+no; data in memory would be lost
+r(4);
+
+. exit, clear
