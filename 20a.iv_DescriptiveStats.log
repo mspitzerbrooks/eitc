@@ -1,0 +1,258 @@
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  /Users/matthewspitzer/Desktop/EITC/Programs/20a.iv_DescriptiveStats.log
+  log type:  text
+ opened on:  26 Apr 2023, 17:20:02
+
+. 
+. // bring in data
+. use "/Users/matthewspitzer/Desktop/EITC/Intermediate/cps00004.dta", clear
+
+. 
+. // clean missing values
+. mvdecode _all, mv(9999)
+      serial: 7 missing values generated
+     eitcred: 108627 missing values generated
+
+. 
+. // create variable to answer:
+. /* How many people are there such that:
+> (a) in 1992, filed taxes (i.e. were not non-filers) and did not receive EITC
+> (b) in 1993, filed and received some non-zero amount of EITC */
+. 
+. /* plan:
+> clean missing values
+> create year variable with just last two digits
+> reshape the data wide, using this year variable
+> only keep the following variables: cpsid filestat eitc
+> now data will be at cpsid (household) level
+> create four variables:
+> - filed 1992 dummy
+> - filed 1993 dummy
+> - nonzero EITC 1992 dummy
+> - nonzero EITC 1993 dummy
+> tabulate these four
+> */
+. 
+. // keep only variables needed
+. keep cpsidp year filestat eitcred
+
+. 
+. // make sure only one person per year
+. // create dummy ID for people with cpsid of 0 
+.         /* documentation:
+>         Respondents who are part of the ASEC oversample (as indicated by ASECOVERP) 
+>         have a CPSIDP value of 0. For further information about the relationship 
+>         between the March Basic and the ASEC, 
+>         please see our additional documentation.
+>         */
+. set seed 2023
+
+. sort cpsidp year
+
+. gen dummy_id = _n
+
+. replace cpsid = dummy_id if cpsidp == 0
+(31338 real changes made)
+
+. drop dummy_id
+
+. isid cpsidp year
+
+. 
+. 
+. // create 2 digit year variable
+. tostring year, replace
+year was int now str4
+
+. gen year_2 = substr(year,3,2)
+
+. destring year_2, replace
+year_2 has all characters numeric; replaced as byte
+
+. drop year
+
+. rename year_2 year
+
+. tab year
+
+       year |      Freq.     Percent        Cum.
+------------+-----------------------------------
+         92 |    155,796       33.73       33.73
+         93 |    155,197       33.60       67.32
+         94 |    150,943       32.68      100.00
+------------+-----------------------------------
+      Total |    461,936      100.00
+
+. keep if inlist(year,92,93,94) // only these two years for now, can expand later
+(0 observations deleted)
+
+. 
+. // reshape wide
+. reshape wide filestat eitcred, i(cpsidp) j(year)
+(note: j = 92 93 94)
+
+Data                               long   ->   wide
+-----------------------------------------------------------------------------
+Number of obs.                   461936   ->  353746
+Number of variables                   4   ->       7
+j variable (3 values)              year   ->   (dropped)
+xij variables:
+                               filestat   ->   filestat92 filestat93 filestat94
+                                eitcred   ->   eitcred92 eitcred93 eitcred94
+-----------------------------------------------------------------------------
+
+. isid cpsid
+
+. 
+. // now create dummies
+. 
+.         // filed in 1992 
+.         gen filed92 = 0
+
+.         replace filed92 = 1 if filestat92 != 6 & !mi(filestat92)
+(99409 real changes made)
+
+.         tab filed92,m
+
+    filed92 |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          0 |    254,337       71.90       71.90
+          1 |     99,409       28.10      100.00
+------------+-----------------------------------
+      Total |    353,746      100.00
+
+.         
+.         // filed in 1993
+.         gen filed93 = 0
+
+.         replace filed93 = 1 if filestat93 != 6 & !mi(filestat93)
+(98111 real changes made)
+
+.         tab filed93,m
+
+    filed93 |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          0 |    255,635       72.27       72.27
+          1 |     98,111       27.73      100.00
+------------+-----------------------------------
+      Total |    353,746      100.00
+
+.         
+.         // filed in 1994
+.         gen filed94 = 0
+
+.         replace filed94 = 1 if filestat94 != 6 & !mi(filestat94)
+(94102 real changes made)
+
+.         tab filed94,m
+
+    filed94 |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          0 |    259,644       73.40       73.40
+          1 |     94,102       26.60      100.00
+------------+-----------------------------------
+      Total |    353,746      100.00
+
+.         
+.         // nonzero EITC in 1992
+.         gen eitcpos92 = 0
+
+.         replace eitcpos92 = 1 if eitcred92>0 & !mi(eitcred92)
+(6416 real changes made)
+
+.         tab eitcpos92,m
+
+  eitcpos92 |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          0 |    347,330       98.19       98.19
+          1 |      6,416        1.81      100.00
+------------+-----------------------------------
+      Total |    353,746      100.00
+
+.         
+.         // nonzero EITC in 1993
+.         gen eitcpos93 = 0
+
+.         replace eitcpos93 = 1 if eitcred93>0 & !mi(eitcred93)
+(6650 real changes made)
+
+.         tab eitcpos93,m
+
+  eitcpos93 |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          0 |    347,096       98.12       98.12
+          1 |      6,650        1.88      100.00
+------------+-----------------------------------
+      Total |    353,746      100.00
+
+.         
+.         // nonzero EITC in 1994
+.         gen eitcpos94 = 0
+
+.         replace eitcpos94 = 1 if eitcred94>0 & !mi(eitcred94)
+(6577 real changes made)
+
+.         tab eitcpos94,m
+
+  eitcpos94 |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          0 |    347,169       98.14       98.14
+          1 |      6,577        1.86      100.00
+------------+-----------------------------------
+      Total |    353,746      100.00
+
+. 
+. // comparisons across years
+. 
+. count if filed92 == 1 & filed93 == 1 & filed94 == 1
+    0
+
+.         
+. // 2 year comparison - 1992 and 1993
+. preserve
+
+.         // keep only people who filed in both years
+.         keep if filed92 == 1 & filed93 == 1
+(320127 observations deleted)
+
+. 
+.         // now tabulate receiving EITC in both years
+.         tablist eitcpos92 eitcpos93, s(v)
+
+  +-----------------------------------------------------------+
+  | eitcp~92   eitcp~93   _Freq_   _Perc_   _CFreq_   _CPerc_ |
+  |-----------------------------------------------------------|
+  |        0          0    31202    92.81     31202     92.81 |
+  |        0          1      673     2.00     31875     94.81 |
+  |        1          0      602     1.79     32477     96.60 |
+  |        1          1     1142     3.40     33619    100.00 |
+  +-----------------------------------------------------------+
+
+. restore
+
+. 
+. // 2 year comparison - 1993 and 1994
+. preserve
+
+.         // keep only people who filed in both years
+.         keep if filed93 == 1 & filed94 == 1
+(320857 observations deleted)
+
+. 
+.         // now tabulate receiving EITC in both years
+.         tablist eitcpos93 eitcpos94, s(v)
+
+  +-----------------------------------------------------------+
+  | eitcp~93   eitcp~94   _Freq_   _Perc_   _CFreq_   _CPerc_ |
+  |-----------------------------------------------------------|
+  |        0          0    30417    92.48     30417     92.48 |
+  |        0          1      661     2.01     31078     94.49 |
+  |        1          0      660     2.01     31738     96.50 |
+  |        1          1     1151     3.50     32889    100.00 |
+  +-----------------------------------------------------------+
+
+. restore
+
+. 
+. cap log close
