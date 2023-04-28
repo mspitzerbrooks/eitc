@@ -2,7 +2,7 @@ cap log close
 log using "/Users/matthewspitzer/Desktop/EITC/Programs/20a.iv_DescriptiveStats.log", replace 
 
 // bring in data
-use "/Users/matthewspitzer/Desktop/EITC/Intermediate/cps00004.dta", clear
+use "/Users/matthewspitzer/Desktop/EITC/Intermediate/cps00002.dta", clear
 
 // clean missing values
 mvdecode _all, mv(9999)
@@ -25,9 +25,9 @@ create four variables:
 - nonzero EITC 1993 dummy
 tabulate these four
 */
-
+exit
 // keep only variables needed
-keep cpsidp year filestat eitcred
+keep cpsidp year filestat eitcred nchild
 
 // make sure only one person per year
 // create dummy ID for people with cpsid of 0 
@@ -111,5 +111,19 @@ preserve
 	// now tabulate receiving EITC in both years
 	tablist eitcpos93 eitcpos94, s(v)
 restore
+
+
+// investigation about characteristics of treatment group and control group
+
+// question - what is meaning of EITC for joint filers? (see data doc)
+
+// characteristics of treatment group
+	// number of children
+	// married vs not
+	// women vs not
+
+// who are newly eligible people in 1994? 
+/* i.e. how many of the 0 to 1s are newly eligible vs 
+getting EITC for another reason (eg change in income)? */
 
 cap log close
