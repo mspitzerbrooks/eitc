@@ -2,7 +2,7 @@
       name:  <unnamed>
        log:  /Users/matthewspitzer/Desktop/EITC/Programs/20a.8_DescriptiveStats.log
   log type:  text
- opened on:   1 May 2023, 12:54:54
+ opened on:   1 May 2023, 13:21:54
 
 . 
 . // bring in data
@@ -86,6 +86,50 @@
  cpsid94 |       2439       2325
 
 . 
+. // by gender
+. gen female94 = .
+(22373 missing values generated)
+
+. replace female94 = 1 if sex94==2
+(11476 real changes made)
+
+. replace female94 = 0 if sex94==1
+(10897 real changes made)
+
+. tablist treat2 female94 if !mi(treat2), s(v)
+
+  +---------------------------------------------------------+
+  | treat2   female94   _Freq_   _Perc_   _CFreq_   _CPerc_ |
+  |---------------------------------------------------------|
+  |      0          0     2052    43.95      2052     43.95 |
+  |      0          1      387     8.29      2439     52.24 |
+  |      1          0     1171    25.08      3610     77.32 |
+  |      1          1     1059    22.68      4669    100.00 |
+  +---------------------------------------------------------+
+
+. 
+. // by married
+. gen married94 = .
+(22373 missing values generated)
+
+. replace married94 = 1 if inlist(marst94,1,2)
+(19671 real changes made)
+
+. replace married94 = 0 if !inlist(marst94,1,2)
+(2702 real changes made)
+
+. tablist treat2 married94 if !mi(treat2), s(v)
+
+  +---------------------------------------------------------+
+  | treat2   marri~94   _Freq_   _Perc_   _CFreq_   _CPerc_ |
+  |---------------------------------------------------------|
+  |      0          0      238     5.10       238      5.10 |
+  |      0          1     2201    47.14      2439     52.24 |
+  |      1          0     1022    21.89      3461     74.13 |
+  |      1          1     1208    25.87      4669    100.00 |
+  +---------------------------------------------------------+
+
+. 
 . // create outcome variables
 . 
 .         // hours worked (intensive margin)
@@ -102,11 +146,11 @@
 . 
 . // basic regressions
 . 
-. eststo clear
+.         eststo clear
 
 . 
-. // extensive margin
-. eststo: reg worked94 treat2, robust cluster(cpsid94)
+.         // extensive margin
+.         eststo: reg worked94 treat2, robust cluster(cpsid94)
 
 Linear regression                                      Number of obs =    4669
                                                        F(  1,  4315) =  120.26
@@ -125,8 +169,8 @@ Linear regression                                      Number of obs =    4669
 (est1 stored)
 
 . 
-. // intensive margin
-. eststo: reg hrs_worked94 treat2, robust cluster(cpsid94)
+.         // intensive margin
+.         eststo: reg hrs_worked94 treat2, robust cluster(cpsid94)
 
 Linear regression                                      Number of obs =    3844
                                                        F(  1,  3565) =  263.42
@@ -145,7 +189,7 @@ hrs_worked94 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
 (est2 stored)
 
 . 
-. esttab, tex
+.         esttab, tex se
 
 {
 \def\sym#1{\ifmmode^{#1}\else\(^{#1}\)\fi}
@@ -155,33 +199,547 @@ hrs_worked94 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
             &\multicolumn{1}{c}{worked94}&\multicolumn{1}{c}{hrs\_worked94}\\
 \hline
 treat2      &      -0.130\sym{***}&      -6.837\sym{***}\\
-            &    (-10.97)         &    (-16.23)         \\
+            &    (0.0119)         &     (0.421)         \\
 [1em]
 \_cons      &       0.886\sym{***}&       45.49\sym{***}\\
-            &    (128.71)         &    (149.31)         \\
+            &   (0.00688)         &     (0.305)         \\
 \hline
 \(N\)       &        4669         &        3844         \\
 \hline\hline
-\multicolumn{3}{l}{\footnotesize \textit{t} statistics in parentheses}\\
+\multicolumn{3}{l}{\footnotesize Standard errors in parentheses}\\
 \multicolumn{3}{l}{\footnotesize \sym{*} \(p<0.05\), \sym{**} \(p<0.01\), \sym{***} \(p<0.001\)}\\
 \end{tabular}
 }
 
-. esttab
+.         esttab, se
 
 --------------------------------------------
                       (1)             (2)   
                  worked94    hrs_worked94   
 --------------------------------------------
 treat2             -0.130***       -6.837***
-                 (-10.97)        (-16.23)   
+                 (0.0119)         (0.421)   
 
 _cons               0.886***        45.49***
-                 (128.71)        (149.31)   
+                (0.00688)         (0.305)   
 --------------------------------------------
 N                    4669            3844   
 --------------------------------------------
-t statistics in parentheses
+Standard errors in parentheses
+* p<0.05, ** p<0.01, *** p<0.001
+
+. 
+. // only controlling for income  
+.         local controls adjginc94 
+
+. 
+.         // extensive margin
+.         eststo: reg worked94 treat2 `controls', robust cluster(cpsid94)
+
+Linear regression                                      Number of obs =    3680
+                                                       F(  2,  3357) =   42.44
+                                                       Prob > F      =  0.0000
+                                                       R-squared     =  0.0345
+                                                       Root MSE      =  .39559
+
+                             (Std. Err. adjusted for 3358 clusters in cpsid94)
+------------------------------------------------------------------------------
+             |               Robust
+    worked94 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+      treat2 |    .170702   .0379447     4.50   0.000     .0963048    .2450992
+   adjginc94 |   .0000109   1.56e-06     7.00   0.000     7.86e-06     .000014
+       _cons |   .4414605   .0590574     7.48   0.000     .3256684    .5572526
+------------------------------------------------------------------------------
+(est3 stored)
+
+. 
+.         // intensive margin
+.         eststo: reg hrs_worked94 treat2 `controls', robust cluster(cpsid94)
+
+Linear regression                                      Number of obs =    2932
+                                                       F(  2,  2681) =   99.51
+                                                       Prob > F      =  0.0000
+                                                       R-squared     =  0.0714
+                                                       Root MSE      =  12.245
+
+                             (Std. Err. adjusted for 2682 clusters in cpsid94)
+------------------------------------------------------------------------------
+             |               Robust
+hrs_worked94 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+      treat2 |    7.05654   1.254879     5.62   0.000     4.595912    9.517167
+   adjginc94 |   .0004895   .0000499     9.81   0.000     .0003916    .0005873
+       _cons |   24.91089   1.940664    12.84   0.000     21.10554    28.71624
+------------------------------------------------------------------------------
+(est4 stored)
+
+. 
+.         esttab, tex se
+
+{
+\def\sym#1{\ifmmode^{#1}\else\(^{#1}\)\fi}
+\begin{tabular}{l*{4}{c}}
+\hline\hline
+            &\multicolumn{1}{c}{(1)}&\multicolumn{1}{c}{(2)}&\multicolumn{1}{c}{(3)}&\multicolumn{1}{c}{(4)}\\
+            &\multicolumn{1}{c}{worked94}&\multicolumn{1}{c}{hrs\_worked94}&\multicolumn{1}{c}{worked94}&\multicolumn{1}{c}{hrs\_worked94}\\
+\hline
+treat2      &      -0.130\sym{***}&      -6.837\sym{***}&       0.171\sym{***}&       7.057\sym{***}\\
+            &    (0.0119)         &     (0.421)         &    (0.0379)         &     (1.255)         \\
+[1em]
+adjginc94   &                     &                     &   0.0000109\sym{***}&    0.000489\sym{***}\\
+            &                     &                     &(0.00000156)         & (0.0000499)         \\
+[1em]
+\_cons      &       0.886\sym{***}&       45.49\sym{***}&       0.441\sym{***}&       24.91\sym{***}\\
+            &   (0.00688)         &     (0.305)         &    (0.0591)         &     (1.941)         \\
+\hline
+\(N\)       &        4669         &        3844         &        3680         &        2932         \\
+\hline\hline
+\multicolumn{5}{l}{\footnotesize Standard errors in parentheses}\\
+\multicolumn{5}{l}{\footnotesize \sym{*} \(p<0.05\), \sym{**} \(p<0.01\), \sym{***} \(p<0.001\)}\\
+\end{tabular}
+}
+
+.         esttab, se
+
+----------------------------------------------------------------------------
+                      (1)             (2)             (3)             (4)   
+                 worked94    hrs_worked94        worked94    hrs_worked94   
+----------------------------------------------------------------------------
+treat2             -0.130***       -6.837***        0.171***        7.057***
+                 (0.0119)         (0.421)        (0.0379)         (1.255)   
+
+adjginc94                                       0.0000109***     0.000489***
+                                             (0.00000156)     (0.0000499)   
+
+_cons               0.886***        45.49***        0.441***        24.91***
+                (0.00688)         (0.305)        (0.0591)         (1.941)   
+----------------------------------------------------------------------------
+N                    4669            3844            3680            2932   
+----------------------------------------------------------------------------
+Standard errors in parentheses
+* p<0.05, ** p<0.01, *** p<0.001
+
+.         
+. // with all controls
+.         local controls adjginc94 female94 married94 nchild94
+
+. 
+.         eststo clear
+
+. 
+.         // extensive margin
+.         eststo: reg worked94 treat2 `controls', robust cluster(cpsid94)
+
+Linear regression                                      Number of obs =    3680
+                                                       F(  5,  3357) =   49.51
+                                                       Prob > F      =  0.0000
+                                                       R-squared     =  0.0691
+                                                       Root MSE      =  .38858
+
+                             (Std. Err. adjusted for 3358 clusters in cpsid94)
+------------------------------------------------------------------------------
+             |               Robust
+    worked94 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+      treat2 |     .18616   .0367909     5.06   0.000     .1140252    .2582948
+   adjginc94 |   .0000132   1.57e-06     8.39   0.000     .0000101    .0000163
+    female94 |   -.093764   .0230198    -4.07   0.000    -.1388983   -.0486297
+   married94 |  -.2191749   .0209628   -10.46   0.000     -.260276   -.1780737
+    nchild94 |     .00588   .0067975     0.87   0.387    -.0074477    .0192076
+       _cons |   .5482737   .0695628     7.88   0.000      .411884    .6846634
+------------------------------------------------------------------------------
+(est1 stored)
+
+. 
+.         // intensive margin
+.         eststo: reg hrs_worked94 treat2 `controls', robust cluster(cpsid94)
+
+Linear regression                                      Number of obs =    2932
+                                                       F(  5,  2681) =   68.76
+                                                       Prob > F      =  0.0000
+                                                       R-squared     =  0.1022
+                                                       Root MSE      =  12.046
+
+                             (Std. Err. adjusted for 2682 clusters in cpsid94)
+------------------------------------------------------------------------------
+             |               Robust
+hrs_worked94 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+      treat2 |    6.52594   1.262387     5.17   0.000     4.050589    9.001291
+   adjginc94 |   .0004119   .0000499     8.26   0.000     .0003141    .0005096
+    female94 |  -5.458458   .6514894    -8.38   0.000     -6.73593   -4.180985
+   married94 |  -1.028259   .6595409    -1.56   0.119    -2.321519    .2650018
+    nchild94 |   .4531868   .2369634     1.91   0.056    -.0114627    .9178364
+       _cons |   28.84375   2.050718    14.07   0.000      24.8226     32.8649
+------------------------------------------------------------------------------
+(est2 stored)
+
+. 
+.         esttab, tex se
+
+{
+\def\sym#1{\ifmmode^{#1}\else\(^{#1}\)\fi}
+\begin{tabular}{l*{2}{c}}
+\hline\hline
+            &\multicolumn{1}{c}{(1)}&\multicolumn{1}{c}{(2)}\\
+            &\multicolumn{1}{c}{worked94}&\multicolumn{1}{c}{hrs\_worked94}\\
+\hline
+treat2      &       0.186\sym{***}&       6.526\sym{***}\\
+            &    (0.0368)         &     (1.262)         \\
+[1em]
+adjginc94   &   0.0000132\sym{***}&    0.000412\sym{***}\\
+            &(0.00000157)         & (0.0000499)         \\
+[1em]
+female94    &     -0.0938\sym{***}&      -5.458\sym{***}\\
+            &    (0.0230)         &     (0.651)         \\
+[1em]
+married94   &      -0.219\sym{***}&      -1.028         \\
+            &    (0.0210)         &     (0.660)         \\
+[1em]
+nchild94    &     0.00588         &       0.453         \\
+            &   (0.00680)         &     (0.237)         \\
+[1em]
+\_cons      &       0.548\sym{***}&       28.84\sym{***}\\
+            &    (0.0696)         &     (2.051)         \\
+\hline
+\(N\)       &        3680         &        2932         \\
+\hline\hline
+\multicolumn{3}{l}{\footnotesize Standard errors in parentheses}\\
+\multicolumn{3}{l}{\footnotesize \sym{*} \(p<0.05\), \sym{**} \(p<0.01\), \sym{***} \(p<0.001\)}\\
+\end{tabular}
+}
+
+.         esttab, se
+
+--------------------------------------------
+                      (1)             (2)   
+                 worked94    hrs_worked94   
+--------------------------------------------
+treat2              0.186***        6.526***
+                 (0.0368)         (1.262)   
+
+adjginc94       0.0000132***     0.000412***
+             (0.00000157)     (0.0000499)   
+
+female94          -0.0938***       -5.458***
+                 (0.0230)         (0.651)   
+
+married94          -0.219***       -1.028   
+                 (0.0210)         (0.660)   
+
+nchild94          0.00588           0.453   
+                (0.00680)         (0.237)   
+
+_cons               0.548***        28.84***
+                 (0.0696)         (2.051)   
+--------------------------------------------
+N                    3680            2932   
+--------------------------------------------
+Standard errors in parentheses
+* p<0.05, ** p<0.01, *** p<0.001
+
+. 
+. // females only
+. keep if female == 1
+(10897 observations deleted)
+
+. 
+. // basic regressions
+. 
+.         eststo clear
+
+. 
+.         // extensive margin
+.         eststo: reg worked94 treat2, robust cluster(cpsid94)
+
+Linear regression                                      Number of obs =    1446
+                                                       F(  1,  1347) =    0.03
+                                                       Prob > F      =  0.8552
+                                                       R-squared     =  0.0000
+                                                       Root MSE      =  .41211
+
+                             (Std. Err. adjusted for 1348 clusters in cpsid94)
+------------------------------------------------------------------------------
+             |               Robust
+    worked94 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+      treat2 |   .0043408   .0237882     0.18   0.855    -.0423251    .0510067
+       _cons |   .7803618   .0208074    37.50   0.000     .7395433    .8211802
+------------------------------------------------------------------------------
+(est1 stored)
+
+. 
+.         // intensive margin
+.         eststo: reg hrs_worked94 treat2, robust cluster(cpsid94)
+
+Linear regression                                      Number of obs =    1133
+                                                       F(  1,  1060) =    6.54
+                                                       Prob > F      =  0.0107
+                                                       R-squared     =  0.0069
+                                                       Root MSE      =  11.509
+
+                             (Std. Err. adjusted for 1061 clusters in cpsid94)
+------------------------------------------------------------------------------
+             |               Robust
+hrs_worked94 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+      treat2 |  -2.164272   .8464643    -2.56   0.011    -3.825208   -.5033358
+       _cons |   38.01987    .715023    53.17   0.000     36.61685    39.42289
+------------------------------------------------------------------------------
+(est2 stored)
+
+. 
+.         esttab, tex se
+
+{
+\def\sym#1{\ifmmode^{#1}\else\(^{#1}\)\fi}
+\begin{tabular}{l*{2}{c}}
+\hline\hline
+            &\multicolumn{1}{c}{(1)}&\multicolumn{1}{c}{(2)}\\
+            &\multicolumn{1}{c}{worked94}&\multicolumn{1}{c}{hrs\_worked94}\\
+\hline
+treat2      &     0.00434         &      -2.164\sym{*}  \\
+            &    (0.0238)         &     (0.846)         \\
+[1em]
+\_cons      &       0.780\sym{***}&       38.02\sym{***}\\
+            &    (0.0208)         &     (0.715)         \\
+\hline
+\(N\)       &        1446         &        1133         \\
+\hline\hline
+\multicolumn{3}{l}{\footnotesize Standard errors in parentheses}\\
+\multicolumn{3}{l}{\footnotesize \sym{*} \(p<0.05\), \sym{**} \(p<0.01\), \sym{***} \(p<0.001\)}\\
+\end{tabular}
+}
+
+.         esttab, se
+
+--------------------------------------------
+                      (1)             (2)   
+                 worked94    hrs_worked94   
+--------------------------------------------
+treat2            0.00434          -2.164*  
+                 (0.0238)         (0.846)   
+
+_cons               0.780***        38.02***
+                 (0.0208)         (0.715)   
+--------------------------------------------
+N                    1446            1133   
+--------------------------------------------
+Standard errors in parentheses
+* p<0.05, ** p<0.01, *** p<0.001
+
+. 
+. // only controlling for income  
+.         local controls adjginc94 
+
+. 
+.         // extensive margin
+.         eststo: reg worked94 treat2 `controls', robust cluster(cpsid94)
+
+Linear regression                                      Number of obs =    1331
+                                                       F(  2,  1236) =   13.28
+                                                       Prob > F      =  0.0000
+                                                       R-squared     =  0.0301
+                                                       Root MSE      =  .40289
+
+                             (Std. Err. adjusted for 1237 clusters in cpsid94)
+------------------------------------------------------------------------------
+             |               Robust
+    worked94 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+      treat2 |   .3175261   .0647383     4.90   0.000      .190517    .4445352
+   adjginc94 |   .0000125   2.44e-06     5.13   0.000     7.72e-06    .0000173
+       _cons |   .3214237   .0925955     3.47   0.001     .1397619    .5030855
+------------------------------------------------------------------------------
+(est3 stored)
+
+. 
+.         // intensive margin
+.         eststo: reg hrs_worked94 treat2 `controls', robust cluster(cpsid94)
+
+Linear regression                                      Number of obs =    1049
+                                                       F(  2,   979) =   39.18
+                                                       Prob > F      =  0.0000
+                                                       R-squared     =  0.0767
+                                                       Root MSE      =  10.932
+
+                              (Std. Err. adjusted for 980 clusters in cpsid94)
+------------------------------------------------------------------------------
+             |               Robust
+hrs_worked94 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+      treat2 |   11.06784   1.672489     6.62   0.000     7.785766    14.34992
+   adjginc94 |   .0005372   .0000617     8.71   0.000     .0004162    .0006582
+       _cons |   18.18429   2.464506     7.38   0.000     13.34797    23.02061
+------------------------------------------------------------------------------
+(est4 stored)
+
+. 
+.         esttab, tex se
+
+{
+\def\sym#1{\ifmmode^{#1}\else\(^{#1}\)\fi}
+\begin{tabular}{l*{4}{c}}
+\hline\hline
+            &\multicolumn{1}{c}{(1)}&\multicolumn{1}{c}{(2)}&\multicolumn{1}{c}{(3)}&\multicolumn{1}{c}{(4)}\\
+            &\multicolumn{1}{c}{worked94}&\multicolumn{1}{c}{hrs\_worked94}&\multicolumn{1}{c}{worked94}&\multicolumn{1}{c}{hrs\_worked94}\\
+\hline
+treat2      &     0.00434         &      -2.164\sym{*}  &       0.318\sym{***}&       11.07\sym{***}\\
+            &    (0.0238)         &     (0.846)         &    (0.0647)         &     (1.672)         \\
+[1em]
+adjginc94   &                     &                     &   0.0000125\sym{***}&    0.000537\sym{***}\\
+            &                     &                     &(0.00000244)         & (0.0000617)         \\
+[1em]
+\_cons      &       0.780\sym{***}&       38.02\sym{***}&       0.321\sym{***}&       18.18\sym{***}\\
+            &    (0.0208)         &     (0.715)         &    (0.0926)         &     (2.465)         \\
+\hline
+\(N\)       &        1446         &        1133         &        1331         &        1049         \\
+\hline\hline
+\multicolumn{5}{l}{\footnotesize Standard errors in parentheses}\\
+\multicolumn{5}{l}{\footnotesize \sym{*} \(p<0.05\), \sym{**} \(p<0.01\), \sym{***} \(p<0.001\)}\\
+\end{tabular}
+}
+
+.         esttab, se
+
+----------------------------------------------------------------------------
+                      (1)             (2)             (3)             (4)   
+                 worked94    hrs_worked94        worked94    hrs_worked94   
+----------------------------------------------------------------------------
+treat2            0.00434          -2.164*          0.318***        11.07***
+                 (0.0238)         (0.846)        (0.0647)         (1.672)   
+
+adjginc94                                       0.0000125***     0.000537***
+                                             (0.00000244)     (0.0000617)   
+
+_cons               0.780***        38.02***        0.321***        18.18***
+                 (0.0208)         (0.715)        (0.0926)         (2.465)   
+----------------------------------------------------------------------------
+N                    1446            1133            1331            1049   
+----------------------------------------------------------------------------
+Standard errors in parentheses
+* p<0.05, ** p<0.01, *** p<0.001
+
+.         
+. // with all controls
+.         local controls adjginc94 female94 married94 nchild94
+
+. 
+.         eststo clear
+
+. 
+.         // extensive margin
+.         eststo: reg worked94 treat2 `controls', robust cluster(cpsid94)
+note: female94 omitted because of collinearity
+
+Linear regression                                      Number of obs =    1331
+                                                       F(  4,  1236) =   42.64
+                                                       Prob > F      =  0.0000
+                                                       R-squared     =  0.1237
+                                                       Root MSE      =  .38325
+
+                             (Std. Err. adjusted for 1237 clusters in cpsid94)
+------------------------------------------------------------------------------
+             |               Robust
+    worked94 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+      treat2 |   .3115661   .0589524     5.29   0.000     .1959083    .4272239
+   adjginc94 |   .0000151   2.19e-06     6.88   0.000     .0000108    .0000194
+    female94 |          0  (omitted)
+   married94 |   -.302709   .0344855    -8.78   0.000    -.3703657   -.2350523
+    nchild94 |  -.0121071   .0125964    -0.96   0.337    -.0368197    .0126056
+       _cons |   .3737628   .0940202     3.98   0.000     .1893061    .5582196
+------------------------------------------------------------------------------
+(est1 stored)
+
+. 
+.         // intensive margin
+.         eststo: reg hrs_worked94 treat2 `controls', robust cluster(cpsid94)
+note: female94 omitted because of collinearity
+
+Linear regression                                      Number of obs =    1049
+                                                       F(  4,   979) =   21.38
+                                                       Prob > F      =  0.0000
+                                                       R-squared     =  0.0851
+                                                       Root MSE      =  10.892
+
+                              (Std. Err. adjusted for 980 clusters in cpsid94)
+------------------------------------------------------------------------------
+             |               Robust
+hrs_worked94 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+      treat2 |   10.76128   1.668552     6.45   0.000     7.486934    14.03563
+   adjginc94 |   .0005506   .0000623     8.84   0.000     .0004284    .0006727
+    female94 |          0  (omitted)
+   married94 |  -2.860999   .9848785    -2.90   0.004    -4.793715    -.928283
+    nchild94 |   .1151239   .4150907     0.28   0.782    -.6994459    .9296937
+       _cons |   18.48214   2.541954     7.27   0.000     13.49384    23.47045
+------------------------------------------------------------------------------
+(est2 stored)
+
+. 
+.         esttab, tex se
+
+{
+\def\sym#1{\ifmmode^{#1}\else\(^{#1}\)\fi}
+\begin{tabular}{l*{2}{c}}
+\hline\hline
+            &\multicolumn{1}{c}{(1)}&\multicolumn{1}{c}{(2)}\\
+            &\multicolumn{1}{c}{worked94}&\multicolumn{1}{c}{hrs\_worked94}\\
+\hline
+treat2      &       0.312\sym{***}&       10.76\sym{***}\\
+            &    (0.0590)         &     (1.669)         \\
+[1em]
+adjginc94   &   0.0000151\sym{***}&    0.000551\sym{***}\\
+            &(0.00000219)         & (0.0000623)         \\
+[1em]
+female94    &           0         &           0         \\
+            &         (.)         &         (.)         \\
+[1em]
+married94   &      -0.303\sym{***}&      -2.861\sym{**} \\
+            &    (0.0345)         &     (0.985)         \\
+[1em]
+nchild94    &     -0.0121         &       0.115         \\
+            &    (0.0126)         &     (0.415)         \\
+[1em]
+\_cons      &       0.374\sym{***}&       18.48\sym{***}\\
+            &    (0.0940)         &     (2.542)         \\
+\hline
+\(N\)       &        1331         &        1049         \\
+\hline\hline
+\multicolumn{3}{l}{\footnotesize Standard errors in parentheses}\\
+\multicolumn{3}{l}{\footnotesize \sym{*} \(p<0.05\), \sym{**} \(p<0.01\), \sym{***} \(p<0.001\)}\\
+\end{tabular}
+}
+
+.         esttab, se
+
+--------------------------------------------
+                      (1)             (2)   
+                 worked94    hrs_worked94   
+--------------------------------------------
+treat2              0.312***        10.76***
+                 (0.0590)         (1.669)   
+
+adjginc94       0.0000151***     0.000551***
+             (0.00000219)     (0.0000623)   
+
+female94                0               0   
+                      (.)             (.)   
+
+married94          -0.303***       -2.861** 
+                 (0.0345)         (0.985)   
+
+nchild94          -0.0121           0.115   
+                 (0.0126)         (0.415)   
+
+_cons               0.374***        18.48***
+                 (0.0940)         (2.542)   
+--------------------------------------------
+N                    1331            1049   
+--------------------------------------------
+Standard errors in parentheses
 * p<0.05, ** p<0.01, *** p<0.001
 
 . 

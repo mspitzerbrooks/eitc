@@ -29,6 +29,18 @@ tablist treat treat2, s(v)
 distinct cpsid94 if treat2==1
 distinct cpsid94 if treat2==0
 
+// by gender
+gen female94 = .
+replace female94 = 1 if sex94==2
+replace female94 = 0 if sex94==1
+tablist treat2 female94 if !mi(treat2), s(v)
+
+// by married
+gen married94 = .
+replace married94 = 1 if inlist(marst94,1,2)
+replace married94 = 0 if !inlist(marst94,1,2)
+tablist treat2 married94 if !mi(treat2), s(v)
+
 // create outcome variables
 
 	// hours worked (intensive margin)
@@ -40,11 +52,83 @@ distinct cpsid94 if treat2==0
 
 // basic regressions
 
-// extensive margin
-reg worked94 treat2, robust cluster(cpsid94)
+	eststo clear
 
-// intensive margin
-reg hrs_worked94 treat2, robust cluster(cpsid94)
+	// extensive margin
+	eststo: reg worked94 treat2, robust cluster(cpsid94)
 
+	// intensive margin
+	eststo: reg hrs_worked94 treat2, robust cluster(cpsid94)
+
+	esttab, tex se
+	esttab, se
+
+// only controlling for income	
+	local controls adjginc94 
+
+	// extensive margin
+	eststo: reg worked94 treat2 `controls', robust cluster(cpsid94)
+
+	// intensive margin
+	eststo: reg hrs_worked94 treat2 `controls', robust cluster(cpsid94)
+
+	esttab, tex se
+	esttab, se
+	
+// with all controls
+	local controls adjginc94 female94 married94 nchild94
+
+	eststo clear
+
+	// extensive margin
+	eststo: reg worked94 treat2 `controls', robust cluster(cpsid94)
+
+	// intensive margin
+	eststo: reg hrs_worked94 treat2 `controls', robust cluster(cpsid94)
+
+	esttab, tex se
+	esttab, se
+
+// females only
+keep if female == 1
+
+// basic regressions
+
+	eststo clear
+
+	// extensive margin
+	eststo: reg worked94 treat2, robust cluster(cpsid94)
+
+	// intensive margin
+	eststo: reg hrs_worked94 treat2, robust cluster(cpsid94)
+
+	esttab, tex se
+	esttab, se
+
+// only controlling for income	
+	local controls adjginc94 
+
+	// extensive margin
+	eststo: reg worked94 treat2 `controls', robust cluster(cpsid94)
+
+	// intensive margin
+	eststo: reg hrs_worked94 treat2 `controls', robust cluster(cpsid94)
+
+	esttab, tex se
+	esttab, se
+	
+// with all controls
+	local controls adjginc94 married94 nchild94
+
+	eststo clear
+
+	// extensive margin
+	eststo: reg worked94 treat2 `controls', robust cluster(cpsid94)
+
+	// intensive margin
+	eststo: reg hrs_worked94 treat2 `controls', robust cluster(cpsid94)
+
+	esttab, tex se
+	esttab, se
 
 cap log close
