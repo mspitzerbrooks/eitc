@@ -2,13 +2,14 @@
       name:  <unnamed>
        log:  /Users/matthewspitzer/Desktop/EITC/Programs/20a.8_DescriptiveStats.log
   log type:  text
- opened on:  30 Apr 2023, 18:19:03
+ opened on:   1 May 2023, 12:54:54
 
 . 
 . // bring in data
 . use "/Users/matthewspitzer/Desktop/EITC/Output/cps00008_wide.dta", clear
 
 . 
+. // basic checks
 . isid serial_pernum
 
 . tab treat,m
@@ -19,6 +20,70 @@
           1 |      2,230        9.97      100.00
 ------------+-----------------------------------
       Total |     22,373      100.00
+
+. 
+. // create variable just for serial
+. gen serial = substr(serial_pernum,1,5)
+
+. 
+. // more missing value cleaning
+. mvdecode adjginc??, mv(99999)
+   adjginc92: 383 missing values generated
+   adjginc93: 720 missing values generated
+   adjginc94: 976 missing values generated
+
+. foreach var of varlist adjginc?? {
+  2.         replace `var' = . if `var' < 0
+  3.         }
+(14 real changes made, 14 to missing)
+(17 real changes made, 17 to missing)
+(13 real changes made, 13 to missing)
+
+. 
+. // more restrictive treatment variable (otherside of max income for EITC)
+. gen treat2 = treat
+
+. replace treat2 = . if adjginc94 > `=39763 + (39763-37160)' & !mi(adjginc94)
+(5046 real changes made, 5046 to missing)
+
+. replace treat2 = . if adjginc94 < `=37160 - (39763-37160)' & treat==0 // just other side of range
+(12658 real changes made, 12658 to missing)
+
+. tab treat2
+
+     treat2 |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          0 |      2,439       52.24       52.24
+          1 |      2,230       47.76      100.00
+------------+-----------------------------------
+      Total |      4,669      100.00
+
+. tablist treat treat2, s(v)
+
+  +------------------------------------------------------+
+  | treat   treat2   _Freq_   _Perc_   _CFreq_   _CPerc_ |
+  |------------------------------------------------------|
+  |     0        0     2439    10.90      2439     10.90 |
+  |     0        .    17704    79.13     20143     90.03 |
+  |     1        1     2230     9.97     22373    100.00 |
+  +------------------------------------------------------+
+
+. 
+. 
+. // how many households
+. distinct cpsid94 if treat2==1
+
+         |        Observations
+         |      total   distinct
+---------+----------------------
+ cpsid94 |       2230       1993
+
+. distinct cpsid94 if treat2==0
+
+         |        Observations
+         |      total   distinct
+---------+----------------------
+ cpsid94 |       2439       2325
 
 . 
 . // create outcome variables
@@ -36,38 +101,88 @@
 
 . 
 . // basic regressions
-. reg worked94 treat, robust
+. 
+. eststo clear
 
-Linear regression                                      Number of obs =   22373
-                                                       F(  1, 22371) =    0.15
-                                                       Prob > F      =  0.6945
-                                                       R-squared     =  0.0000
-                                                       Root MSE      =  .42798
+. 
+. // extensive margin
+. eststo: reg worked94 treat2, robust cluster(cpsid94)
 
+Linear regression                                      Number of obs =    4669
+                                                       F(  1,  4315) =  120.26
+                                                       Prob > F      =  0.0000
+                                                       R-squared     =  0.0292
+                                                       Root MSE      =  .37589
+
+                             (Std. Err. adjusted for 4316 clusters in cpsid94)
 ------------------------------------------------------------------------------
              |               Robust
     worked94 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
 -------------+----------------------------------------------------------------
-       treat |  -.0037667   .0095919    -0.39   0.695    -.0225675     .015034
-       _cons |   .7589237   .0030139   251.81   0.000     .7530162    .7648312
+      treat2 |  -.1304519   .0118955   -10.97   0.000    -.1537732   -.1071306
+       _cons |   .8856089   .0068804   128.71   0.000     .8721197     .899098
 ------------------------------------------------------------------------------
+(est1 stored)
 
-. reg hrs_worked94 treat, robust
+. 
+. // intensive margin
+. eststo: reg hrs_worked94 treat2, robust cluster(cpsid94)
 
-Linear regression                                      Number of obs =   16971
-                                                       F(  1, 16969) =   52.23
+Linear regression                                      Number of obs =    3844
+                                                       F(  1,  3565) =  263.42
                                                        Prob > F      =  0.0000
-                                                       R-squared     =  0.0027
-                                                       Root MSE      =  13.733
+                                                       R-squared     =  0.0632
+                                                       Root MSE      =  13.069
 
+                             (Std. Err. adjusted for 3566 clusters in cpsid94)
 ------------------------------------------------------------------------------
              |               Robust
 hrs_worked94 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
 -------------+----------------------------------------------------------------
-       treat |  -2.382288   .3296452    -7.23   0.000    -3.028427   -1.736149
-       _cons |   41.03846   .1119339   366.63   0.000     40.81906    41.25787
+      treat2 |  -6.837343   .4212711   -16.23   0.000    -7.663299   -6.011386
+       _cons |   45.49352   .3046904   149.31   0.000     44.89613     46.0909
 ------------------------------------------------------------------------------
+(est2 stored)
 
 . 
+. esttab, tex
+
+{
+\def\sym#1{\ifmmode^{#1}\else\(^{#1}\)\fi}
+\begin{tabular}{l*{2}{c}}
+\hline\hline
+            &\multicolumn{1}{c}{(1)}&\multicolumn{1}{c}{(2)}\\
+            &\multicolumn{1}{c}{worked94}&\multicolumn{1}{c}{hrs\_worked94}\\
+\hline
+treat2      &      -0.130\sym{***}&      -6.837\sym{***}\\
+            &    (-10.97)         &    (-16.23)         \\
+[1em]
+\_cons      &       0.886\sym{***}&       45.49\sym{***}\\
+            &    (128.71)         &    (149.31)         \\
+\hline
+\(N\)       &        4669         &        3844         \\
+\hline\hline
+\multicolumn{3}{l}{\footnotesize \textit{t} statistics in parentheses}\\
+\multicolumn{3}{l}{\footnotesize \sym{*} \(p<0.05\), \sym{**} \(p<0.01\), \sym{***} \(p<0.001\)}\\
+\end{tabular}
+}
+
+. esttab
+
+--------------------------------------------
+                      (1)             (2)   
+                 worked94    hrs_worked94   
+--------------------------------------------
+treat2             -0.130***       -6.837***
+                 (-10.97)        (-16.23)   
+
+_cons               0.886***        45.49***
+                 (128.71)        (149.31)   
+--------------------------------------------
+N                    4669            3844   
+--------------------------------------------
+t statistics in parentheses
+* p<0.05, ** p<0.01, *** p<0.001
+
 . 
 . cap log close

@@ -57,7 +57,7 @@ gen adjginc13 = 1.58*adjginc // rate from BLS March 1994 to March 2013
 
 
 // keep only variables needed
-local keep_vars year serial_pernum filestat eitcred adjginc adjginc13 nchild sex marst gqtype relate ahrsworkt majoract intenfwk
+local keep_vars cpsid year serial_pernum filestat eitcred adjginc adjginc13 nchild sex marst gqtype relate ahrsworkt majoract intenfwk
 keep `keep_vars'
 
 local id_vars year serial_pernum
@@ -136,8 +136,9 @@ drop if nchild94==0
 	/* i.e. how many of the 0 to 1s are newly eligible vs 
 	getting EITC for another reason (eg change in income)? */
 gen newly_eligible = 0
-replace newly_eligible = 1 if adjginc1393>37160 & !mi(adjginc1393) & adjginc1394<39763 
-	// #s from Nichols and Rothstein NBER WP 2015 Table 1
+replace newly_eligible = 1 if adjginc1393>37160 & !mi(adjginc1393) & adjginc1394<39763 	
+// #s from Nichols and Rothstein NBER WP 2015 Table 1
+	// q - should this use 94 var for both years or 93 var for one of the years?
 tablist treat newly_eligible , s(v)
 
 // get rid of people treated not because newly eligible
