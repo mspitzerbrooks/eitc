@@ -2,19 +2,20 @@
       name:  <unnamed>
        log:  /Users/matthewspitzer/Desktop/EITC/Programs/20a.iv_DescriptiveStats.log
   log type:  text
- opened on:  27 Apr 2023, 14:16:51
+ opened on:  30 Apr 2023, 16:24:38
 
 . 
 . // bring in data
-. use "/Users/matthewspitzer/Desktop/EITC/Intermediate/cps00002.dta", clear
+. use "/Users/matthewspitzer/Desktop/EITC/Intermediate/cps00005.dta", clear
 
 . 
 . // clean missing values
 . mvdecode _all, mv(9999)
-      serial: 11 missing values generated
-     eitcred: 174673 missing values generated
-eitcred_head: 4 missing values generated
-eitcred_mom2: 2 missing values generated
+      serial: 7 missing values generated
+     ftotval: 15 missing values generated
+      inctot: 12 missing values generated
+     incwage: 9 missing values generated
+     eitcred: 108627 missing values generated
 
 . 
 . // create variable to answer:
@@ -35,31 +36,241 @@ eitcred_mom2: 2 missing values generated
 > - nonzero EITC 1993 dummy
 > tabulate these four
 > */
-. exit
+. 
+. // keep only variables needed
+. keep cpsidp year filestat eitcred ftotval
 
-end of do-file
+. 
+. // make sure only one person per year
+. // create dummy ID for people with cpsid of 0 
+.         /* documentation:
+>         Respondents who are part of the ASEC oversample (as indicated by ASECOVERP) 
+>         have a CPSIDP value of 0. For further information about the relationship 
+>         between the March Basic and the ASEC, 
+>         please see our additional documentation.
+>         */
+. set seed 2023
 
+. sort cpsidp year
 
-. des *mar*
+. gen dummy_id = _n
 
-              storage   display    value
-variable name   type    format     label      variable label
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-marbasecidp     double  %10.0f                Unique identifier for linking March Basic to ASEC
-marbasecidp_h~d double  %10.0f                Unique identifier for linking March Basic to ASEC [of Location of householder]
-marbasecidp_mom double  %10.0f                Unique identifier for linking March Basic to ASEC [of Person number of first mot
-marbasecidp_m~2 double  %10.0f                Unique identifier for linking March Basic to ASEC [of Person number of second mo
+. replace cpsid = dummy_id if cpsidp == 0
+(31338 real changes made)
 
-. des *sex*
-variable *sex* not found
-r(111);
+. drop dummy_id
 
-. des *gen*
-variable *gen* not found
-r(111);
+. isid cpsidp year
 
-. des *mal*
-variable *mal* not found
-r(111);
+. 
+. 
+. // create 2 digit year variable
+. tostring year, replace
+year was int now str4
 
-. exit, clear
+. gen year_2 = substr(year,3,2)
+
+. destring year_2, replace
+year_2 has all characters numeric; replaced as byte
+
+. drop year
+
+. rename year_2 year
+
+. tab year
+
+       year |      Freq.     Percent        Cum.
+------------+-----------------------------------
+         92 |    155,796       33.73       33.73
+         93 |    155,197       33.60       67.32
+         94 |    150,943       32.68      100.00
+------------+-----------------------------------
+      Total |    461,936      100.00
+
+. keep if inlist(year,92,93,94) // only these two years for now, can expand later
+(0 observations deleted)
+
+. 
+. // reshape wide
+. reshape wide filestat eitcred ftotval, i(cpsidp) j(year)
+(note: j = 92 93 94)
+
+Data                               long   ->   wide
+-----------------------------------------------------------------------------
+Number of obs.                   461936   ->  353746
+Number of variables                   5   ->      10
+j variable (3 values)              year   ->   (dropped)
+xij variables:
+                               filestat   ->   filestat92 filestat93 filestat94
+                                eitcred   ->   eitcred92 eitcred93 eitcred94
+                                ftotval   ->   ftotval92 ftotval93 ftotval94
+-----------------------------------------------------------------------------
+
+. isid cpsid
+
+. 
+. // now create dummies
+. 
+.         // filed in 1992 
+.         gen filed92 = 0
+
+.         replace filed92 = 1 if filestat92 != 6 & !mi(filestat92)
+(99409 real changes made)
+
+.         tab filed92,m
+
+    filed92 |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          0 |    254,337       71.90       71.90
+          1 |     99,409       28.10      100.00
+------------+-----------------------------------
+      Total |    353,746      100.00
+
+.         
+.         // filed in 1993
+.         gen filed93 = 0
+
+.         replace filed93 = 1 if filestat93 != 6 & !mi(filestat93)
+(98111 real changes made)
+
+.         tab filed93,m
+
+    filed93 |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          0 |    255,635       72.27       72.27
+          1 |     98,111       27.73      100.00
+------------+-----------------------------------
+      Total |    353,746      100.00
+
+.         
+.         // filed in 1994
+.         gen filed94 = 0
+
+.         replace filed94 = 1 if filestat94 != 6 & !mi(filestat94)
+(94102 real changes made)
+
+.         tab filed94,m
+
+    filed94 |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          0 |    259,644       73.40       73.40
+          1 |     94,102       26.60      100.00
+------------+-----------------------------------
+      Total |    353,746      100.00
+
+.         
+.         // nonzero EITC in 1992
+.         gen eitcpos92 = 0
+
+.         replace eitcpos92 = 1 if eitcred92>0 & !mi(eitcred92)
+(6416 real changes made)
+
+.         tab eitcpos92,m
+
+  eitcpos92 |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          0 |    347,330       98.19       98.19
+          1 |      6,416        1.81      100.00
+------------+-----------------------------------
+      Total |    353,746      100.00
+
+.         
+.         // nonzero EITC in 1993
+.         gen eitcpos93 = 0
+
+.         replace eitcpos93 = 1 if eitcred93>0 & !mi(eitcred93)
+(6650 real changes made)
+
+.         tab eitcpos93,m
+
+  eitcpos93 |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          0 |    347,096       98.12       98.12
+          1 |      6,650        1.88      100.00
+------------+-----------------------------------
+      Total |    353,746      100.00
+
+.         
+.         // nonzero EITC in 1994
+.         gen eitcpos94 = 0
+
+.         replace eitcpos94 = 1 if eitcred94>0 & !mi(eitcred94)
+(6577 real changes made)
+
+.         tab eitcpos94,m
+
+  eitcpos94 |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          0 |    347,169       98.14       98.14
+          1 |      6,577        1.86      100.00
+------------+-----------------------------------
+      Total |    353,746      100.00
+
+. 
+. // comparisons across years
+. 
+. count if filed92 == 1 & filed93 == 1 & filed94 == 1 // noone in all three years
+    0
+
+.         
+. // 2 year comparison - 1992 and 1993
+. preserve
+
+.         // keep only people who filed in both years
+.         keep if filed92 == 1 & filed93 == 1
+(320127 observations deleted)
+
+. 
+.         // now tabulate receiving EITC in both years
+.         tablist eitcpos92 eitcpos93, s(v)
+
+  +-----------------------------------------------------------+
+  | eitcp~92   eitcp~93   _Freq_   _Perc_   _CFreq_   _CPerc_ |
+  |-----------------------------------------------------------|
+  |        0          0    31202    92.81     31202     92.81 |
+  |        0          1      673     2.00     31875     94.81 |
+  |        1          0      602     1.79     32477     96.60 |
+  |        1          1     1142     3.40     33619    100.00 |
+  +-----------------------------------------------------------+
+
+. restore
+
+. 
+. // 2 year comparison - 1993 and 1994
+. preserve
+
+.         // keep only people who filed in both years
+.         keep if filed93 == 1 & filed94 == 1
+(320857 observations deleted)
+
+. 
+.         // now tabulate receiving EITC in both years
+.         tablist eitcpos93 eitcpos94, s(v)
+
+  +-----------------------------------------------------------+
+  | eitcp~93   eitcp~94   _Freq_   _Perc_   _CFreq_   _CPerc_ |
+  |-----------------------------------------------------------|
+  |        0          0    30417    92.48     30417     92.48 |
+  |        0          1      661     2.01     31078     94.49 |
+  |        1          0      660     2.01     31738     96.50 |
+  |        1          1     1151     3.50     32889    100.00 |
+  +-----------------------------------------------------------+
+
+. restore
+
+. 
+. 
+. // investigation about characteristics of treatment group and control group
+. 
+. // question - what is meaning of EITC for joint filers? (see data doc)
+. 
+. // characteristics of treatment group
+.         // number of children
+.         // married vs not
+.         // women vs not
+. 
+. // who are newly eligible people in 1994? 
+. /* i.e. how many of the 0 to 1s are newly eligible vs 
+> getting EITC for another reason (eg change in income)? */
+. 
+. cap log close

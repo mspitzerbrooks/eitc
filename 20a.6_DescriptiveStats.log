@@ -1,0 +1,979 @@
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  /Users/matthewspitzer/Desktop/EITC/Programs/20a.6_DescriptiveStats.log
+  log type:  text
+ opened on:  30 Apr 2023, 16:49:41
+
+. 
+. // bring in data
+. use "/Users/matthewspitzer/Desktop/EITC/Intermediate/cps00006.dta", clear
+
+. 
+. // clean missing values
+. mvdecode _all, mv(9999)
+      serial: 7 missing values generated
+     ftotval: 15 missing values generated
+      inctot: 12 missing values generated
+     incwage: 9 missing values generated
+     adjginc: 7 missing values generated
+     eitcred: 108627 missing values generated
+
+. 
+. // create variable to answer:
+. /* How many people are there such that:
+> (a) in 1992, filed taxes (i.e. were not non-filers) and did not receive EITC
+> (b) in 1993, filed and received some non-zero amount of EITC */
+. 
+. /* plan:
+> clean missing values
+> create year variable with just last two digits
+> reshape the data wide, using this year variable
+> only keep the following variables: cpsid filestat eitc
+> now data will be at cpsid (household) level
+> create four variables:
+> - filed 1992 dummy
+> - filed 1993 dummy
+> - nonzero EITC 1992 dummy
+> - nonzero EITC 1993 dummy
+> tabulate these four
+> */
+. 
+. // keep only variables needed
+. keep cpsidp year filestat eitcred adjginc nchild
+
+. 
+. // make sure only one person per year
+. // create dummy ID for people with cpsid of 0 
+.         /* documentation:
+>         Respondents who are part of the ASEC oversample (as indicated by ASECOVERP) 
+>         have a CPSIDP value of 0. For further information about the relationship 
+>         between the March Basic and the ASEC, 
+>         please see our additional documentation.
+>         */
+. set seed 2023
+
+. sort cpsidp year
+
+. gen dummy_id = _n
+
+. replace cpsid = dummy_id if cpsidp == 0
+(31338 real changes made)
+
+. drop dummy_id
+
+. isid cpsidp year
+
+. 
+. 
+. // create 2 digit year variable
+. tostring year, replace
+year was int now str4
+
+. gen year_2 = substr(year,3,2)
+
+. destring year_2, replace
+year_2 has all characters numeric; replaced as byte
+
+. drop year
+
+. rename year_2 year
+
+. tab year
+
+       year |      Freq.     Percent        Cum.
+------------+-----------------------------------
+         92 |    155,796       33.73       33.73
+         93 |    155,197       33.60       67.32
+         94 |    150,943       32.68      100.00
+------------+-----------------------------------
+      Total |    461,936      100.00
+
+. keep if inlist(year,92,93,94) // only these two years for now, can expand later
+(0 observations deleted)
+
+. 
+. // create variable for adjusted gross income in 2013 dollars
+.         // (for comparison with table in paper)
+. gen adjginc13 = 1.58*adjginc // rate from BLS March 1994 to March 2013
+(7 missing values generated)
+
+. 
+. 
+. // reshape wide
+. reshape wide filestat eitcred adjginc adjginc13 nchild, i(cpsidp) j(year)
+(note: j = 92 93 94)
+
+Data                               long   ->   wide
+-----------------------------------------------------------------------------
+Number of obs.                   461936   ->  353746
+Number of variables                   7   ->      16
+j variable (3 values)              year   ->   (dropped)
+xij variables:
+                               filestat   ->   filestat92 filestat93 filestat94
+                                eitcred   ->   eitcred92 eitcred93 eitcred94
+                                adjginc   ->   adjginc92 adjginc93 adjginc94
+                              adjginc13   ->   adjginc1392 adjginc1393 adjginc1394
+                                 nchild   ->   nchild92 nchild93 nchild94
+-----------------------------------------------------------------------------
+
+. isid cpsid
+
+. 
+. // now create dummies
+. 
+.         // filed in 1992 
+.         gen filed92 = 0
+
+.         replace filed92 = 1 if filestat92 != 6 & !mi(filestat92)
+(99409 real changes made)
+
+.         tab filed92,m
+
+    filed92 |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          0 |    254,337       71.90       71.90
+          1 |     99,409       28.10      100.00
+------------+-----------------------------------
+      Total |    353,746      100.00
+
+.         
+.         // filed in 1993
+.         gen filed93 = 0
+
+.         replace filed93 = 1 if filestat93 != 6 & !mi(filestat93)
+(98111 real changes made)
+
+.         tab filed93,m
+
+    filed93 |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          0 |    255,635       72.27       72.27
+          1 |     98,111       27.73      100.00
+------------+-----------------------------------
+      Total |    353,746      100.00
+
+.         
+.         // filed in 1994
+.         gen filed94 = 0
+
+.         replace filed94 = 1 if filestat94 != 6 & !mi(filestat94)
+(94102 real changes made)
+
+.         tab filed94,m
+
+    filed94 |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          0 |    259,644       73.40       73.40
+          1 |     94,102       26.60      100.00
+------------+-----------------------------------
+      Total |    353,746      100.00
+
+.         
+.         // nonzero EITC in 1992
+.         gen eitcpos92 = 0
+
+.         replace eitcpos92 = 1 if eitcred92>0 & !mi(eitcred92)
+(6416 real changes made)
+
+.         tab eitcpos92,m
+
+  eitcpos92 |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          0 |    347,330       98.19       98.19
+          1 |      6,416        1.81      100.00
+------------+-----------------------------------
+      Total |    353,746      100.00
+
+.         
+.         // nonzero EITC in 1993
+.         gen eitcpos93 = 0
+
+.         replace eitcpos93 = 1 if eitcred93>0 & !mi(eitcred93)
+(6650 real changes made)
+
+.         tab eitcpos93,m
+
+  eitcpos93 |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          0 |    347,096       98.12       98.12
+          1 |      6,650        1.88      100.00
+------------+-----------------------------------
+      Total |    353,746      100.00
+
+.         
+.         // nonzero EITC in 1994
+.         gen eitcpos94 = 0
+
+.         replace eitcpos94 = 1 if eitcred94>0 & !mi(eitcred94)
+(6577 real changes made)
+
+.         tab eitcpos94,m
+
+  eitcpos94 |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          0 |    347,169       98.14       98.14
+          1 |      6,577        1.86      100.00
+------------+-----------------------------------
+      Total |    353,746      100.00
+
+. 
+. // comparisons across years
+. 
+. count if filed92 == 1 & filed93 == 1 & filed94 == 1 // noone in all three years
+    0
+
+.         
+. // 2 year comparison - 1992 and 1993
+. preserve
+
+.         // keep only people who filed in both years
+.         keep if filed92 == 1 & filed93 == 1
+(320127 observations deleted)
+
+. 
+.         // now tabulate receiving EITC in both years
+.         tablist eitcpos92 eitcpos93, s(v)
+
+  +-----------------------------------------------------------+
+  | eitcp~92   eitcp~93   _Freq_   _Perc_   _CFreq_   _CPerc_ |
+  |-----------------------------------------------------------|
+  |        0          0    31202    92.81     31202     92.81 |
+  |        0          1      673     2.00     31875     94.81 |
+  |        1          0      602     1.79     32477     96.60 |
+  |        1          1     1142     3.40     33619    100.00 |
+  +-----------------------------------------------------------+
+
+. restore
+
+. 
+. // 2 year comparison - 1993 and 1994
+. preserve
+
+.         // keep only people who filed in both years
+.         keep if filed93 == 1 & filed94 == 1
+(320857 observations deleted)
+
+. 
+.         // now tabulate receiving EITC in both years
+.         tablist eitcpos93 eitcpos94, s(v)
+
+  +-----------------------------------------------------------+
+  | eitcp~93   eitcp~94   _Freq_   _Perc_   _CFreq_   _CPerc_ |
+  |-----------------------------------------------------------|
+  |        0          0    30417    92.48     30417     92.48 |
+  |        0          1      661     2.01     31078     94.49 |
+  |        1          0      660     2.01     31738     96.50 |
+  |        1          1     1151     3.50     32889    100.00 |
+  +-----------------------------------------------------------+
+
+. restore
+
+. 
+. // define treatment variable
+. gen treat = .
+(353746 missing values generated)
+
+. replace treat = 1 if filed93 == 1 & filed94 == 1 & eitcpos93 == 0 & eitcpos94 == 1
+(661 real changes made)
+
+. replace treat = 0 if filed93 == 1 & filed94 == 1 & eitcpos93 == 0 & eitcpos94 == 0
+(30417 real changes made)
+
+. exit
+
+end of do-file
+
+
+. tab nchild if treat ==1
+nchild ambiguous abbreviation
+r(111);
+
+. tab nchild94 if treat ==1
+
+         94 nchild |      Freq.     Percent        Cum.
+-------------------+-----------------------------------
+0 children present |          9        1.36        1.36
+   1 child present |        289       43.72       45.08
+                 2 |        242       36.61       81.69
+                 3 |         91       13.77       95.46
+                 4 |         20        3.03       98.49
+                 5 |          8        1.21       99.70
+                 7 |          2        0.30      100.00
+-------------------+-----------------------------------
+             Total |        661      100.00
+
+. des nchild
+nchild ambiguous abbreviation
+r(111);
+
+. des nchild*
+
+              storage   display    value
+variable name   type    format     label      variable label
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+nchild92        byte    %18.0g     nchild_lbl
+                                              92 nchild
+nchild93        byte    %18.0g     nchild_lbl
+                                              93 nchild
+nchild94        byte    %18.0g     nchild_lbl
+                                              94 nchild
+
+. numlabel, add
+
+. tab nchild94 if treat ==1
+
+            94 nchild |      Freq.     Percent        Cum.
+----------------------+-----------------------------------
+0. 0 children present |          9        1.36        1.36
+   1. 1 child present |        289       43.72       45.08
+                 2. 2 |        242       36.61       81.69
+                 3. 3 |         91       13.77       95.46
+                 4. 4 |         20        3.03       98.49
+                 5. 5 |          8        1.21       99.70
+                 7. 7 |          2        0.30      100.00
+----------------------+-----------------------------------
+                Total |        661      100.00
+
+. tab nchild94 if treat ==0
+
+            94 nchild |      Freq.     Percent        Cum.
+----------------------+-----------------------------------
+0. 0 children present |     16,733       55.01       55.01
+   1. 1 child present |      5,526       18.17       73.18
+                 2. 2 |      5,369       17.65       90.83
+                 3. 3 |      2,073        6.82       97.65
+                 4. 4 |        507        1.67       99.31
+                 5. 5 |        142        0.47       99.78
+                 6. 6 |         33        0.11       99.89
+                 7. 7 |         14        0.05       99.93
+                 8. 8 |          9        0.03       99.96
+                9. 9+ |         11        0.04      100.00
+----------------------+-----------------------------------
+                Total |     30,417      100.00
+
+. tab nchild94 if treat ==0, *
+option * not allowed
+r(198);
+
+. tab nchild94 if treat ==0, p
+
+            94 nchild |      Freq.
+----------------------+------------+-------------------------------------------
+0. 0 children present |     16,733 |*******************************************
+   1. 1 child present |      5,526 |**************
+                 2. 2 |      5,369 |**************
+                 3. 3 |      2,073 |*****
+                 4. 4 |        507 |*
+                 5. 5 |        142 |
+                 6. 6 |         33 |
+                 7. 7 |         14 |
+                 8. 8 |          9 |
+                9. 9+ |         11 |
+----------------------+------------+-------------------------------------------
+                Total |     30,417 
+
+. tab nchild94 if treat ==1, p
+
+            94 nchild |      Freq.
+----------------------+------------+-------------------------------------------
+0. 0 children present |          9 |*
+   1. 1 child present |        289 |*******************************************
+                 2. 2 |        242 |************************************
+                 3. 3 |         91 |**************
+                 4. 4 |         20 |***
+                 5. 5 |          8 |*
+                 7. 7 |          2 |
+----------------------+------------+-------------------------------------------
+                Total |        661 
+
+. do "/Users/matthewspitzer/Desktop/EITC/Programs/10a.7_Import.do"
+
+. * NOTE: You need to set the Stata working directory to the path
+. * where the data file is located.
+. 
+. set more off
+
+. cd "/Users/matthewspitzer/Desktop/EITC/Input"
+/Users/matthewspitzer/Desktop/EITC/Input
+
+. 
+. clear
+
+. quietly infix                ///
+>   int     year      1-4      ///
+>   long    serial    5-9      ///
+>   byte    month     10-11    ///
+>   double  cpsid     12-25    ///
+>   byte    asecflag  26-26    ///
+>   double  asecwth   27-37    ///
+>   byte    gqtype    38-39    ///
+>   byte    pernum    40-41    ///
+>   double  cpsidp    42-55    ///
+>   double  asecwt    56-66    ///
+>   int     relate    67-70    ///
+>   byte    age       71-72    ///
+>   byte    sex       73-73    ///
+>   int     race      74-76    ///
+>   byte    marst     77-77    ///
+>   byte    nchild    78-78    ///
+>   byte    empstat   79-80    ///
+>   double  ftotval   81-90    ///
+>   double  inctot    91-99    ///
+>   double  incwage   100-107  ///
+>   double  adjginc   108-115  ///
+>   int     eitcred   116-119  ///
+>   byte    filestat  120-120  ///
+>   long    taxinc    121-127  ///
+>   using `"cps_00007.dat"'
+
+. 
+. replace asecwth  = asecwth  / 10000
+(461923 real changes made)
+
+. replace asecwt   = asecwt   / 10000
+(461927 real changes made)
+
+. 
+. format cpsid    %14.0f
+
+. format asecwth  %11.4f
+
+. format cpsidp   %14.0f
+
+. format asecwt   %11.4f
+
+. format ftotval  %10.0f
+
+. format inctot   %9.0f
+
+. format incwage  %8.0f
+
+. format adjginc  %8.0f
+
+. 
+. label var year     `"Survey year"'
+
+. label var serial   `"Household serial number"'
+
+. label var month    `"Month"'
+
+. label var cpsid    `"CPSID, household record"'
+
+. label var asecflag `"Flag for ASEC"'
+
+. label var asecwth  `"Annual Social and Economic Supplement Household weight"'
+
+. label var gqtype   `"Household type"'
+
+. label var pernum   `"Person number in sample unit"'
+
+. label var cpsidp   `"CPSID, person record"'
+
+. label var asecwt   `"Annual Social and Economic Supplement Weight"'
+
+. label var relate   `"Relationship to household head"'
+
+. label var age      `"Age"'
+
+. label var sex      `"Sex"'
+
+. label var race     `"Race"'
+
+. label var marst    `"Marital status"'
+
+. label var nchild   `"Number of own children in household"'
+
+. label var empstat  `"Employment status"'
+
+. label var ftotval  `"Total family income"'
+
+. label var inctot   `"Total personal income"'
+
+. label var incwage  `"Wage and salary income"'
+
+. label var adjginc  `"Adjusted gross income"'
+
+. label var eitcred  `"Earned income tax credit"'
+
+. label var filestat `"Tax filer status"'
+
+. label var taxinc   `"Taxable income amount"'
+
+. 
+. label define month_lbl 01 `"January"'
+
+. label define month_lbl 02 `"February"', add
+
+. label define month_lbl 03 `"March"', add
+
+. label define month_lbl 04 `"April"', add
+
+. label define month_lbl 05 `"May"', add
+
+. label define month_lbl 06 `"June"', add
+
+. label define month_lbl 07 `"July"', add
+
+. label define month_lbl 08 `"August"', add
+
+. label define month_lbl 09 `"September"', add
+
+. label define month_lbl 10 `"October"', add
+
+. label define month_lbl 11 `"November"', add
+
+. label define month_lbl 12 `"December"', add
+
+. label values month month_lbl
+
+. 
+. label define asecflag_lbl 1 `"ASEC"'
+
+. label define asecflag_lbl 2 `"March Basic"', add
+
+. label values asecflag asecflag_lbl
+
+. 
+. label define gqtype_lbl 00 `"Non-interview household"'
+
+. label define gqtype_lbl 01 `"Husband/wife primary family (neither Armed Forces)"', add
+
+. label define gqtype_lbl 02 `"Husband/wife primary family (either/both Armed Forces)"', add
+
+. label define gqtype_lbl 03 `"Unmarried civilian male - primary family householder"', add
+
+. label define gqtype_lbl 04 `"Unmarried civilian female - primary family householder"', add
+
+. label define gqtype_lbl 05 `"Primary family householder - respondent in Armed Forces, unmarried"', add
+
+. label define gqtype_lbl 06 `"Civilian male primary individual"', add
+
+. label define gqtype_lbl 07 `"Civilian female primary individual"', add
+
+. label define gqtype_lbl 08 `"Primary individual householder - respondent in Armed Forces"', add
+
+. label define gqtype_lbl 09 `"Group quarters with family"', add
+
+. label define gqtype_lbl 10 `"Group quarters without family"', add
+
+. label define gqtype_lbl 99 `"Blank"', add
+
+. label values gqtype gqtype_lbl
+
+. 
+. label define relate_lbl 0101 `"Head/householder"'
+
+. label define relate_lbl 0201 `"Spouse"', add
+
+. label define relate_lbl 0202 `"Opposite sex spouse"', add
+
+. label define relate_lbl 0203 `"Same sex spouse"', add
+
+. label define relate_lbl 0301 `"Child"', add
+
+. label define relate_lbl 0303 `"Stepchild"', add
+
+. label define relate_lbl 0501 `"Parent"', add
+
+. label define relate_lbl 0701 `"Sibling"', add
+
+. label define relate_lbl 0901 `"Grandchild"', add
+
+. label define relate_lbl 1001 `"Other relatives, n.s."', add
+
+. label define relate_lbl 1113 `"Partner/roommate"', add
+
+. label define relate_lbl 1114 `"Unmarried partner"', add
+
+. label define relate_lbl 1116 `"Opposite sex unmarried partner"', add
+
+. label define relate_lbl 1117 `"Same sex unmarried partner"', add
+
+. label define relate_lbl 1115 `"Housemate/roomate"', add
+
+. label define relate_lbl 1241 `"Roomer/boarder/lodger"', add
+
+. label define relate_lbl 1242 `"Foster children"', add
+
+. label define relate_lbl 1260 `"Other nonrelatives"', add
+
+. label define relate_lbl 9900 `"Relationship unknown"', add
+
+. label define relate_lbl 9999 `"NIU"', add
+
+. label values relate relate_lbl
+
+. 
+. label define age_lbl 00 `"Under 1 year"'
+
+. label define age_lbl 01 `"1"', add
+
+. label define age_lbl 02 `"2"', add
+
+. label define age_lbl 03 `"3"', add
+
+. label define age_lbl 04 `"4"', add
+
+. label define age_lbl 05 `"5"', add
+
+. label define age_lbl 06 `"6"', add
+
+. label define age_lbl 07 `"7"', add
+
+. label define age_lbl 08 `"8"', add
+
+. label define age_lbl 09 `"9"', add
+
+. label define age_lbl 10 `"10"', add
+
+. label define age_lbl 11 `"11"', add
+
+. label define age_lbl 12 `"12"', add
+
+. label define age_lbl 13 `"13"', add
+
+. label define age_lbl 14 `"14"', add
+
+. label define age_lbl 15 `"15"', add
+
+. label define age_lbl 16 `"16"', add
+
+. label define age_lbl 17 `"17"', add
+
+. label define age_lbl 18 `"18"', add
+
+. label define age_lbl 19 `"19"', add
+
+. label define age_lbl 20 `"20"', add
+
+. label define age_lbl 21 `"21"', add
+
+. label define age_lbl 22 `"22"', add
+
+. label define age_lbl 23 `"23"', add
+
+. label define age_lbl 24 `"24"', add
+
+. label define age_lbl 25 `"25"', add
+
+. label define age_lbl 26 `"26"', add
+
+. label define age_lbl 27 `"27"', add
+
+. label define age_lbl 28 `"28"', add
+
+. label define age_lbl 29 `"29"', add
+
+. label define age_lbl 30 `"30"', add
+
+. label define age_lbl 31 `"31"', add
+
+. label define age_lbl 32 `"32"', add
+
+. label define age_lbl 33 `"33"', add
+
+. label define age_lbl 34 `"34"', add
+
+. label define age_lbl 35 `"35"', add
+
+. label define age_lbl 36 `"36"', add
+
+. label define age_lbl 37 `"37"', add
+
+. label define age_lbl 38 `"38"', add
+
+. label define age_lbl 39 `"39"', add
+
+. label define age_lbl 40 `"40"', add
+
+. label define age_lbl 41 `"41"', add
+
+. label define age_lbl 42 `"42"', add
+
+. label define age_lbl 43 `"43"', add
+
+. label define age_lbl 44 `"44"', add
+
+. label define age_lbl 45 `"45"', add
+
+. label define age_lbl 46 `"46"', add
+
+. label define age_lbl 47 `"47"', add
+
+. label define age_lbl 48 `"48"', add
+
+. label define age_lbl 49 `"49"', add
+
+. label define age_lbl 50 `"50"', add
+
+. label define age_lbl 51 `"51"', add
+
+. label define age_lbl 52 `"52"', add
+
+. label define age_lbl 53 `"53"', add
+
+. label define age_lbl 54 `"54"', add
+
+. label define age_lbl 55 `"55"', add
+
+. label define age_lbl 56 `"56"', add
+
+. label define age_lbl 57 `"57"', add
+
+. label define age_lbl 58 `"58"', add
+
+. label define age_lbl 59 `"59"', add
+
+. label define age_lbl 60 `"60"', add
+
+. label define age_lbl 61 `"61"', add
+
+. label define age_lbl 62 `"62"', add
+
+. label define age_lbl 63 `"63"', add
+
+. label define age_lbl 64 `"64"', add
+
+. label define age_lbl 65 `"65"', add
+
+. label define age_lbl 66 `"66"', add
+
+. label define age_lbl 67 `"67"', add
+
+. label define age_lbl 68 `"68"', add
+
+. label define age_lbl 69 `"69"', add
+
+. label define age_lbl 70 `"70"', add
+
+. label define age_lbl 71 `"71"', add
+
+. label define age_lbl 72 `"72"', add
+
+. label define age_lbl 73 `"73"', add
+
+. label define age_lbl 74 `"74"', add
+
+. label define age_lbl 75 `"75"', add
+
+. label define age_lbl 76 `"76"', add
+
+. label define age_lbl 77 `"77"', add
+
+. label define age_lbl 78 `"78"', add
+
+. label define age_lbl 79 `"79"', add
+
+. label define age_lbl 80 `"80"', add
+
+. label define age_lbl 81 `"81"', add
+
+. label define age_lbl 82 `"82"', add
+
+. label define age_lbl 83 `"83"', add
+
+. label define age_lbl 84 `"84"', add
+
+. label define age_lbl 85 `"85"', add
+
+. label define age_lbl 86 `"86"', add
+
+. label define age_lbl 87 `"87"', add
+
+. label define age_lbl 88 `"88"', add
+
+. label define age_lbl 89 `"89"', add
+
+. label define age_lbl 90 `"90 (90+, 1988-2002)"', add
+
+. label define age_lbl 91 `"91"', add
+
+. label define age_lbl 92 `"92"', add
+
+. label define age_lbl 93 `"93"', add
+
+. label define age_lbl 94 `"94"', add
+
+. label define age_lbl 95 `"95"', add
+
+. label define age_lbl 96 `"96"', add
+
+. label define age_lbl 97 `"97"', add
+
+. label define age_lbl 98 `"98"', add
+
+. label define age_lbl 99 `"99+"', add
+
+. label values age age_lbl
+
+. 
+. label define sex_lbl 1 `"Male"'
+
+. label define sex_lbl 2 `"Female"', add
+
+. label define sex_lbl 9 `"NIU"', add
+
+. label values sex sex_lbl
+
+. 
+. label define race_lbl 100 `"White"'
+
+. label define race_lbl 200 `"Black"', add
+
+. label define race_lbl 300 `"American Indian/Aleut/Eskimo"', add
+
+. label define race_lbl 650 `"Asian or Pacific Islander"', add
+
+. label define race_lbl 651 `"Asian only"', add
+
+. label define race_lbl 652 `"Hawaiian/Pacific Islander only"', add
+
+. label define race_lbl 700 `"Other (single) race, n.e.c."', add
+
+. label define race_lbl 801 `"White-Black"', add
+
+. label define race_lbl 802 `"White-American Indian"', add
+
+. label define race_lbl 803 `"White-Asian"', add
+
+. label define race_lbl 804 `"White-Hawaiian/Pacific Islander"', add
+
+. label define race_lbl 805 `"Black-American Indian"', add
+
+. label define race_lbl 806 `"Black-Asian"', add
+
+. label define race_lbl 807 `"Black-Hawaiian/Pacific Islander"', add
+
+. label define race_lbl 808 `"American Indian-Asian"', add
+
+. label define race_lbl 809 `"Asian-Hawaiian/Pacific Islander"', add
+
+. label define race_lbl 810 `"White-Black-American Indian"', add
+
+. label define race_lbl 811 `"White-Black-Asian"', add
+
+. label define race_lbl 812 `"White-American Indian-Asian"', add
+
+. label define race_lbl 813 `"White-Asian-Hawaiian/Pacific Islander"', add
+
+. label define race_lbl 814 `"White-Black-American Indian-Asian"', add
+
+. label define race_lbl 815 `"American Indian-Hawaiian/Pacific Islander"', add
+
+. label define race_lbl 816 `"White-Black--Hawaiian/Pacific Islander"', add
+
+. label define race_lbl 817 `"White-American Indian-Hawaiian/Pacific Islander"', add
+
+. label define race_lbl 818 `"Black-American Indian-Asian"', add
+
+. label define race_lbl 819 `"White-American Indian-Asian-Hawaiian/Pacific Islander"', add
+
+. label define race_lbl 820 `"Two or three races, unspecified"', add
+
+. label define race_lbl 830 `"Four or five races, unspecified"', add
+
+. label define race_lbl 999 `"Blank"', add
+
+. label values race race_lbl
+
+. 
+. label define marst_lbl 1 `"Married, spouse present"'
+
+. label define marst_lbl 2 `"Married, spouse absent"', add
+
+. label define marst_lbl 3 `"Separated"', add
+
+. label define marst_lbl 4 `"Divorced"', add
+
+. label define marst_lbl 5 `"Widowed"', add
+
+. label define marst_lbl 6 `"Never married/single"', add
+
+. label define marst_lbl 7 `"Widowed or Divorced"', add
+
+. label define marst_lbl 9 `"NIU"', add
+
+. label values marst marst_lbl
+
+. 
+. label define nchild_lbl 0 `"0 children present"'
+
+. label define nchild_lbl 1 `"1 child present"', add
+
+. label define nchild_lbl 2 `"2"', add
+
+. label define nchild_lbl 3 `"3"', add
+
+. label define nchild_lbl 4 `"4"', add
+
+. label define nchild_lbl 5 `"5"', add
+
+. label define nchild_lbl 6 `"6"', add
+
+. label define nchild_lbl 7 `"7"', add
+
+. label define nchild_lbl 8 `"8"', add
+
+. label define nchild_lbl 9 `"9+"', add
+
+. label values nchild nchild_lbl
+
+. 
+. label define empstat_lbl 00 `"NIU"'
+
+. label define empstat_lbl 01 `"Armed Forces"', add
+
+. label define empstat_lbl 10 `"At work"', add
+
+. label define empstat_lbl 12 `"Has job, not at work last week"', add
+
+. label define empstat_lbl 20 `"Unemployed"', add
+
+. label define empstat_lbl 21 `"Unemployed, experienced worker"', add
+
+. label define empstat_lbl 22 `"Unemployed, new worker"', add
+
+. label define empstat_lbl 30 `"Not in labor force"', add
+
+. label define empstat_lbl 31 `"NILF, housework"', add
+
+. label define empstat_lbl 32 `"NILF, unable to work"', add
+
+. label define empstat_lbl 33 `"NILF, school"', add
+
+. label define empstat_lbl 34 `"NILF, other"', add
+
+. label define empstat_lbl 35 `"NILF, unpaid, lt 15 hours"', add
+
+. label define empstat_lbl 36 `"NILF, retired"', add
+
+. label values empstat empstat_lbl
+
+. 
+. label define filestat_lbl 0 `"No data"'
+
+. label define filestat_lbl 1 `"Joint, both less than 65"', add
+
+. label define filestat_lbl 2 `"Joint, one less than 65, one 65+"', add
+
+. label define filestat_lbl 3 `"Joint, both 65+"', add
+
+. label define filestat_lbl 4 `"Head of household"', add
+
+. label define filestat_lbl 5 `"Single"', add
+
+. label define filestat_lbl 6 `"Nonfiler"', add
+
+. label values filestat filestat_lbl
+
+. 
+. 
+. save "/Users/matthewspitzer/Desktop/EITC/Intermediate/cps00007.dta"
+file /Users/matthewspitzer/Desktop/EITC/Intermediate/cps00007.dta saved
+
+. 
+end of do-file
+
+. do "/var/folders/n3/vv3yyryn0xg0cxhqpmy1wv3m0000gn/T//SD18045.000000"
+
+. cap log close

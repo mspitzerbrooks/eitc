@@ -1,0 +1,73 @@
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  /Users/matthewspitzer/Desktop/EITC/Programs/20a.8_DescriptiveStats.log
+  log type:  text
+ opened on:  30 Apr 2023, 18:19:03
+
+. 
+. // bring in data
+. use "/Users/matthewspitzer/Desktop/EITC/Output/cps00008_wide.dta", clear
+
+. 
+. isid serial_pernum
+
+. tab treat,m
+
+      treat |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          0 |     20,143       90.03       90.03
+          1 |      2,230        9.97      100.00
+------------+-----------------------------------
+      Total |     22,373      100.00
+
+. 
+. // create outcome variables
+. 
+.         // hours worked (intensive margin)
+.         gen hrs_worked94 = ahrsworkt94
+(5402 missing values generated)
+
+. 
+.         // worked (extensive margin)
+.         gen worked94 = 0
+
+.         replace worked94 = 1 if !mi(hrs_worked94)
+(16971 real changes made)
+
+. 
+. // basic regressions
+. reg worked94 treat, robust
+
+Linear regression                                      Number of obs =   22373
+                                                       F(  1, 22371) =    0.15
+                                                       Prob > F      =  0.6945
+                                                       R-squared     =  0.0000
+                                                       Root MSE      =  .42798
+
+------------------------------------------------------------------------------
+             |               Robust
+    worked94 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+       treat |  -.0037667   .0095919    -0.39   0.695    -.0225675     .015034
+       _cons |   .7589237   .0030139   251.81   0.000     .7530162    .7648312
+------------------------------------------------------------------------------
+
+. reg hrs_worked94 treat, robust
+
+Linear regression                                      Number of obs =   16971
+                                                       F(  1, 16969) =   52.23
+                                                       Prob > F      =  0.0000
+                                                       R-squared     =  0.0027
+                                                       Root MSE      =  13.733
+
+------------------------------------------------------------------------------
+             |               Robust
+hrs_worked94 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+       treat |  -2.382288   .3296452    -7.23   0.000    -3.028427   -1.736149
+       _cons |   41.03846   .1119339   366.63   0.000     40.81906    41.25787
+------------------------------------------------------------------------------
+
+. 
+. 
+. cap log close
