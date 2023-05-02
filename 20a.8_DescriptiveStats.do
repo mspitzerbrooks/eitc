@@ -33,14 +33,17 @@ tabulate these four
 */
 
 // check level of uniqueness
-isid year serial pernum
+drop if cpsidp == 0 // can't use these (see data doc for why)
+isid year cpsidp
 
+/*
 // create single identifier
 tostring serial, gen(serial_str)
 tostring pernum, gen(pernum_str)
 gen serial_pernum = serial_str + "_" + pernum_str
 drop serial_str pernum_str
 isid year serial_pernum
+*/
 
 // create 2 digit year variable
 tostring year, replace
@@ -57,16 +60,16 @@ gen adjginc13 = 1.58*adjginc // rate from BLS March 1994 to March 2013
 
 
 // keep only variables needed
-local keep_vars cpsid year serial_pernum filestat eitcred adjginc adjginc13 nchild sex marst gqtype relate ahrsworkt majoract intenfwk
+local keep_vars cpsid year cpsidp filestat eitcred adjginc adjginc13 nchild sex marst gqtype relate ahrsworkt majoract intenfwk
 keep `keep_vars'
 
-local id_vars year serial_pernum
+local id_vars year cpsidp
 
 local reshape_vars : list keep_vars - id_vars
 
 // reshape wide
-reshape wide `reshape_vars', i(serial_pernum) j(year)
-isid serial_pernum
+reshape wide `reshape_vars', i(cpsidp) j(year)
+isid cpsidp
 
 // now create dummies
 
@@ -126,6 +129,7 @@ restore
 gen treat = .
 replace treat = 1 if filed93 == 1 & filed94 == 1 & eitcpos93 == 0 & eitcpos94 == 1
 replace treat = 0 if filed93 == 1 & filed94 == 1 & eitcpos93 == 0 & eitcpos94 == 0
+tab treat,m
 
 // get rid of individuals with no children
 count if nchild94==0 & treat==1 // only 17 or so
@@ -167,7 +171,7 @@ keep if !mi(treat)
 // final diagnostics
 count
 qui compress
-isid serial_pernum
+isid cpsidp
 
 // save the data
 save "/Users/matthewspitzer/Desktop/EITC/Output/cps00008_wide.dta", replace

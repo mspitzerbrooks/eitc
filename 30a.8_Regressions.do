@@ -1,15 +1,17 @@
 cap log close
-log using "/Users/matthewspitzer/Desktop/EITC/Programs/20a.8_DescriptiveStats.log", replace 
+log using "/Users/matthewspitzer/Desktop/EITC/Programs/30a.8_Regressions.log", replace 
 
 // bring in data
 use "/Users/matthewspitzer/Desktop/EITC/Output/cps00008_wide.dta", clear
 
 // basic checks
-isid serial_pernum
+isid cpsidp
 tab treat,m
 
+/*
 // create variable just for serial
 gen serial = substr(serial_pernum,1,5)
+*/
 
 // more missing value cleaning
 mvdecode adjginc??, mv(99999)
@@ -60,9 +62,6 @@ tablist treat2 married94 if !mi(treat2), s(v)
 	// intensive margin
 	eststo: reg hrs_worked94 treat2, robust cluster(cpsid94)
 
-	esttab, tex se
-	esttab, se
-
 // only controlling for income	
 	local controls adjginc94 
 
@@ -90,6 +89,7 @@ tablist treat2 married94 if !mi(treat2), s(v)
 	esttab, se
 
 // females only
+preserve
 keep if female == 1
 
 // basic regressions
@@ -102,8 +102,6 @@ keep if female == 1
 	// intensive margin
 	eststo: reg hrs_worked94 treat2, robust cluster(cpsid94)
 
-	esttab, tex se
-	esttab, se
 
 // only controlling for income	
 	local controls adjginc94 
@@ -130,5 +128,6 @@ keep if female == 1
 
 	esttab, tex se
 	esttab, se
+restore
 
 cap log close
