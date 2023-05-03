@@ -1,14 +1,20 @@
 ---------------------------------------------------------------------------------------------------------------------------
       name:  <unnamed>
-       log:  /Users/matthewspitzer/Desktop/EITC/Programs/20a.8_DescriptiveStats.log
+       log:  /Users/matthewspitzer/Desktop/EITC/Programs/20a.10_DescriptiveStats.log
   log type:  text
- opened on:   2 May 2023, 16:41:37
+ opened on:   2 May 2023, 16:41:11
 
 . 
 . // bring in data
-. use "/Users/matthewspitzer/Desktop/EITC/Intermediate/cps00008.dta", clear
+. use "/Users/matthewspitzer/Desktop/EITC/Intermediate/cps00010.dta", clear
 
 . 
+. // keep only years of interest 
+.         // (the rest are for John to do year-by-year comparisons)
+. keep if inlist(year,1992,1993,1994)
+(992469 observations deleted)
+
+.         
 . // clean missing values
 . qui ds
 
@@ -19,8 +25,8 @@
 . local mvdecode_vars : list all_vars - serial_var
 
 . di "`mvdecode_vars'"
-year month cpsid asecflag asecwth gqtype pernum cpsidp asecwt relate age sex race marst nchild empstat ahrsworkt majoract i
-> ntenfwk ftotval inctot incwage adjginc eitcred filestat taxinc
+year month cpsid asecflag asecwth gqtype pernum cpsidp asecwt relate age sex race marst nchild empstat ahrsworkt educ educ9
+> 9 majoract intenfwk ftotval inctot incwage adjginc eitcred filestat taxinc
 
 . mvdecode `mvdecode_vars', mv(9999)
      ftotval: 15 missing values generated
@@ -466,8 +472,9 @@ Married, spouse present |     12,707       92.86       92.86
 
 . 
 . // save the data
-. save "/Users/matthewspitzer/Desktop/EITC/Output/cps00008_wide.dta", replace
-file /Users/matthewspitzer/Desktop/EITC/Output/cps00008_wide.dta saved
+. save "/Users/matthewspitzer/Desktop/EITC/Output/cps00010_wide.dta", replace
+(note: file /Users/matthewspitzer/Desktop/EITC/Output/cps00010_wide.dta not found)
+file /Users/matthewspitzer/Desktop/EITC/Output/cps00010_wide.dta saved
 
 . 
 . cap log close

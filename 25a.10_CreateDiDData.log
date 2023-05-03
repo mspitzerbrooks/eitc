@@ -1,0 +1,98 @@
+---------------------------------------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  /Users/matthewspitzer/Desktop/EITC/Programs/25a.10_CreateDiDData.log
+  log type:  text
+ opened on:   2 May 2023, 17:19:11
+
+. 
+. // bring in data
+. use "/Users/matthewspitzer/Desktop/EITC/Output/cps00010_wide.dta", clear
+
+. 
+. // new treatment variable
+. gen treat_did = .
+(14084 missing values generated)
+
+. replace treat_did = 1 if inrange(adjginc1394,37160,39763)
+(196 real changes made)
+
+. replace treat_did = 0 if inrange(adjginc1394,39763,`=39763 + (39763-37160)')
+(182 real changes made)
+
+. tablist treat treat_did, s(v)
+
+  +--------------------------------------------------------+
+  | treat   treat_~d   _Freq_   _Perc_   _CFreq_   _CPerc_ |
+  |--------------------------------------------------------|
+  |     0          0      182     1.29       182      1.29 |
+  |     0          1      196     1.39       378      2.68 |
+  |     0          .    13306    94.48     13684     97.16 |
+  |     1          .      400     2.84     14084    100.00 |
+  +--------------------------------------------------------+
+
+. drop treat
+
+. rename treat_did treat
+
+. keep if !mi(treat)
+(13706 observations deleted)
+
+. 
+. // reshape long
+. reshape long
+(note: j = 92 93 94)
+
+Data                               wide   ->   long
+-----------------------------------------------------------------------------
+Number of obs.                      378   ->    1134
+Number of variables                  48   ->      23
+j variable (3 values)                     ->   year
+xij variables:
+                cpsid92 cpsid93 cpsid94   ->   cpsid
+       filestat92 filestat93 filestat94   ->   filestat
+          eitcred92 eitcred93 eitcred94   ->   eitcred
+          adjginc92 adjginc93 adjginc94   ->   adjginc
+    adjginc1392 adjginc1393 adjginc1394   ->   adjginc13
+             nchild92 nchild93 nchild94   ->   nchild
+                      sex92 sex93 sex94   ->   sex
+                marst92 marst93 marst94   ->   marst
+             gqtype92 gqtype93 gqtype94   ->   gqtype
+             relate92 relate93 relate94   ->   relate
+    ahrsworkt92 ahrsworkt93 ahrsworkt94   ->   ahrsworkt
+       majoract92 majoract93 majoract94   ->   majoract
+       intenfwk92 intenfwk93 intenfwk94   ->   intenfwk
+-----------------------------------------------------------------------------
+
+. 
+. // keep only years of interest
+. keep if inlist(year,93,94)
+(378 observations deleted)
+
+. 
+. // make post variable
+. gen post = 0
+
+. replace post = 1 if year==94
+(378 real changes made)
+
+. tablist year post, s(v)
+
+  +---------------------------------------------------+
+  | year   post   _Freq_   _Perc_   _CFreq_   _CPerc_ |
+  |---------------------------------------------------|
+  |   93      0      378    50.00       378     50.00 |
+  |   94      1      378    50.00       756    100.00 |
+  +---------------------------------------------------+
+
+. 
+. // save
+. isid year cpsidp
+
+. qui compress
+
+. save "/Users/matthewspitzer/Desktop/EITC/Output/cps00010_did.dta", replace
+(note: file /Users/matthewspitzer/Desktop/EITC/Output/cps00010_did.dta not found)
+file /Users/matthewspitzer/Desktop/EITC/Output/cps00010_did.dta saved
+
+. 
+. cap log close
