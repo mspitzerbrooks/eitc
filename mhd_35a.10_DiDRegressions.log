@@ -1,0 +1,976 @@
+------------------------------------------------------------------------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  //wsl$/Ubuntu/home/mahdi/Documents/eitc/mahdi_35a.10_DiDRegressions.log
+  log type:  text
+ opened on:   3 May 2023, 12:07:09
+
+. 
+. 
+. 
+. // bring in data
+. use "$path_mahdi/Output/cps00010_did.dta", clear
+
+. 
+. // basic checks
+. isid year cpsidp
+
+. tab treat,m
+
+      treat |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          0 |    198,406       68.60       68.60
+          1 |     90,830       31.40      100.00
+------------+-----------------------------------
+      Total |    289,236      100.00
+
+. 
+. /*
+> // create variable just for serial
+> gen serial = substr(serial_pernum,1,5)
+> */
+. 
+. // more missing value cleaning
+. mvdecode adjginc??, mv(99999)
+
+. foreach var of varlist adjginc?? {
+  2.         replace `var' = . if `var' < 0
+  3.         }
+(241 real changes made, 241 to missing)
+
+. 
+. // how many households
+. distinct cpsid if treat==1
+
+       |        Observations
+       |      total   distinct
+-------+----------------------
+ cpsid |      63289      25704
+
+. distinct cpsid if treat==0
+
+       |        Observations
+       |      total   distinct
+-------+----------------------
+ cpsid |     135395      55813
+
+. 
+. // by gender
+. gen female = .
+(289,236 missing values generated)
+
+. replace female = 1 if sex==2
+(103,487 real changes made)
+
+. replace female = 0 if sex==1
+(95,197 real changes made)
+
+. tab treat female if !mi(treat), 
+
+           |        female
+     treat |         0          1 |     Total
+-----------+----------------------+----------
+         0 |    67,587     67,808 |   135,395 
+         1 |    27,610     35,679 |    63,289 
+-----------+----------------------+----------
+     Total |    95,197    103,487 |   198,684 
+
+
+. 
+. // by married
+. gen married = .
+(289,236 missing values generated)
+
+. replace married = 1 if inlist(marst,1,2)
+(89,430 real changes made)
+
+. replace married = 0 if !inlist(marst,1,2)
+(199,806 real changes made)
+
+. tab treat married if !mi(treat), 
+
+           |        married
+     treat |         0          1 |     Total
+-----------+----------------------+----------
+         0 |   160,593     37,813 |   198,406 
+         1 |    39,213     51,617 |    90,830 
+-----------+----------------------+----------
+     Total |   199,806     89,430 |   289,236 
+
+
+. 
+. // create outcome variables
+. 
+.         // hours worked (intensive margin)
+.         gen hrs_worked = ahrsworkt
+(201,829 missing values generated)
+
+. 
+.         // worked (extensive margin)
+.         gen worked = 0
+
+.         replace worked = 1 if !mi(hrs_worked)
+(87,407 real changes made)
+
+. 
+. // create interaction term
+. gen treat_x_post = treat*post
+
+.         
+. // basic regressions
+. 
+.         eststo clear
+
+. 
+.         // extensive margin
+.         eststo: reg worked treat post treat_x_post, robust cluster(cpsid)
+
+Linear regression                               Number of obs     =    198,684
+                                                F(3, 55812)       =    5063.39
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.1131
+                                                Root MSE          =     .46747
+
+                             (Std. Err. adjusted for 55,813 clusters in cpsid)
+------------------------------------------------------------------------------
+             |               Robust
+      worked |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+       treat |   .3488482   .0029122   119.79   0.000     .3431403    .3545562
+        post |  -.0081321   .0025588    -3.18   0.001    -.0131473   -.0031169
+treat_x_post |   .0328528    .004213     7.80   0.000     .0245953    .0411104
+       _cons |   .3280647   .0018159   180.66   0.000     .3245055    .3316238
+------------------------------------------------------------------------------
+(est1 stored)
+
+. 
+.         // intensive margin
+.         eststo: reg hrs_worked  treat post treat_x_post, robust cluster(cpsid)
+
+Linear regression                               Number of obs     =     87,407
+                                                F(3, 40226)       =     225.87
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.0103
+                                                Root MSE          =     14.141
+
+                             (Std. Err. adjusted for 40,227 clusters in cpsid)
+------------------------------------------------------------------------------
+             |               Robust
+  hrs_worked |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+       treat |   2.719604   .1145422    23.74   0.000     2.495099    2.944109
+        post |  -.6865226   .1472681    -4.66   0.000    -.9751715   -.3978737
+treat_x_post |    .544089     .19023     2.86   0.004     .1712337    .9169442
+       _cons |   37.73437   .0868397   434.53   0.000     37.56416    37.90458
+------------------------------------------------------------------------------
+(est2 stored)
+
+.         
+. 
+. // only controlling for income  
+.         local controls adjginc 
+
+. 
+.         // extensive margin
+.         eststo: reg worked treat post treat_x_post `controls', robust cluster(cpsid)
+
+Linear regression                               Number of obs     =    198,678
+                                                F(3, 55812)       =          .
+                                                Prob > F          =          .
+                                                R-squared         =     0.2580
+                                                Root MSE          =     .42758
+
+                             (Std. Err. adjusted for 55,813 clusters in cpsid)
+------------------------------------------------------------------------------
+             |               Robust
+      worked |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+       treat |   .1859971   .0031441    59.16   0.000     .1798347    .1921596
+        post |  -.0166704     .00219    -7.61   0.000    -.0209629   -.0123779
+treat_x_post |     .04204   .0039893    10.54   0.000      .034221     .049859
+     adjginc |  -4.87e-09   2.22e-11  -219.37   0.000    -4.91e-09   -4.82e-09
+       _cons |   .4910009   .0021767   225.57   0.000     .4867345    .4952672
+------------------------------------------------------------------------------
+(est3 stored)
+
+. 
+.         // intensive margin
+.         eststo: reg hrs_worked treat post treat_x_post `controls', robust cluster(cpsid)
+
+Linear regression                               Number of obs     =     87,402
+                                                F(4, 40225)       =    1934.74
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.1070
+                                                Root MSE          =     13.433
+
+                             (Std. Err. adjusted for 40,226 clusters in cpsid)
+------------------------------------------------------------------------------
+             |               Robust
+  hrs_worked |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+       treat |    2.01411   .1089931    18.48   0.000     1.800481    2.227739
+        post |  -.8856813   .1401002    -6.32   0.000    -1.160281   -.6110816
+treat_x_post |   .4666755   .1830439     2.55   0.011     .1079053    .8254457
+     adjginc |   .0001609   1.90e-06    84.72   0.000     .0001572    .0001646
+       _cons |   34.22335   .0946503   361.58   0.000     34.03783    34.40887
+------------------------------------------------------------------------------
+(est4 stored)
+
+. 
+.         esttab, tex se
+
+{
+\def\sym#1{\ifmmode^{#1}\else\(^{#1}\)\fi}
+\begin{tabular}{l*{4}{c}}
+\hline\hline
+            &\multicolumn{1}{c}{(1)}&\multicolumn{1}{c}{(2)}&\multicolumn{1}{c}{(3)}&\multicolumn{1}{c}{(4)}\\
+            &\multicolumn{1}{c}{worked}&\multicolumn{1}{c}{hrs\_worked}&\multicolumn{1}{c}{worked}&\multicolumn{1}{c}{hrs\_worked}\\
+\hline
+treat       &       0.349\sym{***}&       2.720\sym{***}&       0.186\sym{***}&       2.014\sym{***}\\
+            &   (0.00291)         &     (0.115)         &   (0.00314)         &     (0.109)         \\
+[1em]
+post        &    -0.00813\sym{**} &      -0.687\sym{***}&     -0.0167\sym{***}&      -0.886\sym{***}\\
+            &   (0.00256)         &     (0.147)         &   (0.00219)         &     (0.140)         \\
+[1em]
+treat\_x\_post&      0.0329\sym{***}&       0.544\sym{**} &      0.0420\sym{***}&       0.467\sym{*}  \\
+            &   (0.00421)         &     (0.190)         &   (0.00399)         &     (0.183)         \\
+[1em]
+adjginc     &                     &                     &   -4.87e-09\sym{***}&    0.000161\sym{***}\\
+            &                     &                     &  (2.22e-11)         &(0.00000190)         \\
+[1em]
+\_cons      &       0.328\sym{***}&       37.73\sym{***}&       0.491\sym{***}&       34.22\sym{***}\\
+            &   (0.00182)         &    (0.0868)         &   (0.00218)         &    (0.0947)         \\
+\hline
+\(N\)       &      198684         &       87407         &      198678         &       87402         \\
+\hline\hline
+\multicolumn{5}{l}{\footnotesize Standard errors in parentheses}\\
+\multicolumn{5}{l}{\footnotesize \sym{*} \(p<0.05\), \sym{**} \(p<0.01\), \sym{***} \(p<0.001\)}\\
+\end{tabular}
+}
+
+.         esttab, se
+
+----------------------------------------------------------------------------
+                      (1)             (2)             (3)             (4)   
+                   worked      hrs_worked          worked      hrs_worked   
+----------------------------------------------------------------------------
+treat               0.349***        2.720***        0.186***        2.014***
+                (0.00291)         (0.115)       (0.00314)         (0.109)   
+
+post             -0.00813**        -0.687***      -0.0167***       -0.886***
+                (0.00256)         (0.147)       (0.00219)         (0.140)   
+
+treat_x_post       0.0329***        0.544**        0.0420***        0.467*  
+                (0.00421)         (0.190)       (0.00399)         (0.183)   
+
+adjginc                                         -4.87e-09***     0.000161***
+                                               (2.22e-11)    (0.00000190)   
+
+_cons               0.328***        37.73***        0.491***        34.22***
+                (0.00182)        (0.0868)       (0.00218)        (0.0947)   
+----------------------------------------------------------------------------
+N                  198684           87407          198678           87402   
+----------------------------------------------------------------------------
+Standard errors in parentheses
+* p<0.05, ** p<0.01, *** p<0.001
+
+.         
+. // with all controls
+.         local controls adjginc female married nchild less_hi_schl
+
+. 
+.         eststo clear
+
+. 
+.         // extensive margin
+.         eststo: reg worked treat post treat_x_post `controls', robust cluster(cpsid)
+
+Linear regression                               Number of obs     =    198,678
+                                                F(7, 55812)       =          .
+                                                Prob > F          =          .
+                                                R-squared         =     0.3282
+                                                Root MSE          =     .40687
+
+                             (Std. Err. adjusted for 55,813 clusters in cpsid)
+------------------------------------------------------------------------------
+             |               Robust
+      worked |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+       treat |   .1379285   .0052493    26.28   0.000     .1276399    .1482171
+        post |  -.0142993   .0020929    -6.83   0.000    -.0184015   -.0101971
+treat_x_post |   .0349115   .0038287     9.12   0.000     .0274072    .0424158
+     adjginc |  -2.61e-09   3.08e-11   -84.81   0.000    -2.67e-09   -2.55e-09
+      female |  -.1096048   .0019237   -56.98   0.000    -.1133752   -.1058344
+     married |  -.0096639   .0035455    -2.73   0.006    -.0166132   -.0027146
+      nchild |   .0102162    .002152     4.75   0.000     .0059982    .0144341
+less_hi_schl |   -.324922   .0034274   -94.80   0.000    -.3316398   -.3182043
+       _cons |   .6432682   .0028713   224.04   0.000     .6376406    .6488959
+------------------------------------------------------------------------------
+(est1 stored)
+
+. 
+.         // intensive margin
+.         eststo: reg hrs_worked treat post treat_x_post `controls', robust cluster(cpsid)
+
+Linear regression                               Number of obs     =     87,402
+                                                F(8, 40225)       =    1320.32
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.1347
+                                                Root MSE          =     13.223
+
+                             (Std. Err. adjusted for 40,226 clusters in cpsid)
+------------------------------------------------------------------------------
+             |               Robust
+  hrs_worked |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+       treat |   1.376624   .1829388     7.53   0.000      1.01806    1.735189
+        post |   -.854708    .137542    -6.21   0.000    -1.124294   -.5851224
+treat_x_post |   .4245537   .1809638     2.35   0.019     .0698606    .7792469
+     adjginc |   .0001166   2.26e-06    51.49   0.000     .0001122     .000121
+      female |  -3.558916   .1212381   -29.35   0.000    -3.796546   -3.321287
+     married |   1.728183   .1223936    14.12   0.000     1.488289    1.968077
+      nchild |  -.0290221   .0781397    -0.37   0.710    -.1821777    .1241334
+less_hi_schl |  -5.442553   .1707412   -31.88   0.000    -5.777209   -5.107896
+       _cons |   36.91302   .1415762   260.73   0.000     36.63553    37.19051
+------------------------------------------------------------------------------
+(est2 stored)
+
+. 
+.         esttab, tex se
+
+{
+\def\sym#1{\ifmmode^{#1}\else\(^{#1}\)\fi}
+\begin{tabular}{l*{2}{c}}
+\hline\hline
+            &\multicolumn{1}{c}{(1)}&\multicolumn{1}{c}{(2)}\\
+            &\multicolumn{1}{c}{worked}&\multicolumn{1}{c}{hrs\_worked}\\
+\hline
+treat       &       0.138\sym{***}&       1.377\sym{***}\\
+            &   (0.00525)         &     (0.183)         \\
+[1em]
+post        &     -0.0143\sym{***}&      -0.855\sym{***}\\
+            &   (0.00209)         &     (0.138)         \\
+[1em]
+treat\_x\_post&      0.0349\sym{***}&       0.425\sym{*}  \\
+            &   (0.00383)         &     (0.181)         \\
+[1em]
+adjginc     &   -2.61e-09\sym{***}&    0.000117\sym{***}\\
+            &  (3.08e-11)         &(0.00000226)         \\
+[1em]
+female      &      -0.110\sym{***}&      -3.559\sym{***}\\
+            &   (0.00192)         &     (0.121)         \\
+[1em]
+married     &    -0.00966\sym{**} &       1.728\sym{***}\\
+            &   (0.00355)         &     (0.122)         \\
+[1em]
+nchild      &      0.0102\sym{***}&     -0.0290         \\
+            &   (0.00215)         &    (0.0781)         \\
+[1em]
+less\_hi\_schl&      -0.325\sym{***}&      -5.443\sym{***}\\
+            &   (0.00343)         &     (0.171)         \\
+[1em]
+\_cons      &       0.643\sym{***}&       36.91\sym{***}\\
+            &   (0.00287)         &     (0.142)         \\
+\hline
+\(N\)       &      198678         &       87402         \\
+\hline\hline
+\multicolumn{3}{l}{\footnotesize Standard errors in parentheses}\\
+\multicolumn{3}{l}{\footnotesize \sym{*} \(p<0.05\), \sym{**} \(p<0.01\), \sym{***} \(p<0.001\)}\\
+\end{tabular}
+}
+
+.         esttab, se
+
+--------------------------------------------
+                      (1)             (2)   
+                   worked      hrs_worked   
+--------------------------------------------
+treat               0.138***        1.377***
+                (0.00525)         (0.183)   
+
+post              -0.0143***       -0.855***
+                (0.00209)         (0.138)   
+
+treat_x_post       0.0349***        0.425*  
+                (0.00383)         (0.181)   
+
+adjginc         -2.61e-09***     0.000117***
+               (3.08e-11)    (0.00000226)   
+
+female             -0.110***       -3.559***
+                (0.00192)         (0.121)   
+
+married          -0.00966**         1.728***
+                (0.00355)         (0.122)   
+
+nchild             0.0102***      -0.0290   
+                (0.00215)        (0.0781)   
+
+less_hi_schl       -0.325***       -5.443***
+                (0.00343)         (0.171)   
+
+_cons               0.643***        36.91***
+                (0.00287)         (0.142)   
+--------------------------------------------
+N                  198678           87402   
+--------------------------------------------
+Standard errors in parentheses
+* p<0.05, ** p<0.01, *** p<0.001
+
+. 
+. forval i = 0/1 {
+  2.         
+. // females/males only
+. preserve
+  3. keep if female == `i'
+  4. 
+. // basic regressions
+. 
+.         eststo clear
+  5. 
+.         // extensive margin
+.         eststo: reg worked treat post treat_x_post, robust cluster(cpsid)
+  6. 
+.         // intensive margin
+.         eststo: reg hrs_worked  treat post treat_x_post, robust cluster(cpsid)
+  7.         
+. 
+. // only controlling for income  
+.         local controls adjginc 
+  8. 
+.         // extensive margin
+.         eststo: reg worked treat post treat_x_post `controls', robust cluster(cpsid)
+  9. 
+.         // intensive margin
+.         eststo: reg hrs_worked treat post treat_x_post `controls', robust cluster(cpsid)
+ 10. 
+.         esttab, tex se
+ 11.         esttab, se
+ 12.         
+. // with all controls
+.         local controls adjginc female married nchild less_hi_schl
+ 13. 
+.         eststo clear
+ 14. 
+.         // extensive margin
+.         eststo: reg worked treat post treat_x_post `controls', robust cluster(cpsid)
+ 15. 
+.         // intensive margin
+.         eststo: reg hrs_worked treat post treat_x_post `controls', robust cluster(cpsid)
+ 16. 
+.         esttab, tex se
+ 17.         esttab, se
+ 18.         
+. restore
+ 19. 
+. }
+(194,039 observations deleted)
+
+Linear regression                               Number of obs     =     95,197
+                                                F(3, 45077)       =    4840.24
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.1637
+                                                Root MSE          =     .45702
+
+                             (Std. Err. adjusted for 45,078 clusters in cpsid)
+------------------------------------------------------------------------------
+             |               Robust
+      worked |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+       treat |   .4373569   .0037593   116.34   0.000     .4299885    .4447253
+        post |  -.0124885    .003423    -3.65   0.000    -.0191977   -.0057793
+treat_x_post |   .0290574   .0055145     5.27   0.000     .0182488     .039866
+       _cons |   .3579227   .0023502   152.29   0.000     .3533162    .3625292
+------------------------------------------------------------------------------
+(est1 stored)
+
+Linear regression                               Number of obs     =     46,056
+                                                F(3, 30753)       =     478.12
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.0377
+                                                Root MSE          =      13.99
+
+                             (Std. Err. adjusted for 30,754 clusters in cpsid)
+------------------------------------------------------------------------------
+             |               Robust
+  hrs_worked |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+       treat |   5.390579   .1520855    35.44   0.000     5.092485    5.688672
+        post |  -.4360747   .2033681    -2.14   0.032    -.8346845   -.0374648
+treat_x_post |   .5412676   .2613114     2.07   0.038     .0290865    1.053449
+       _cons |   39.52803   .1151243   343.35   0.000     39.30238    39.75368
+------------------------------------------------------------------------------
+(est2 stored)
+
+Linear regression                               Number of obs     =     95,192
+                                                F(3, 45076)       =          .
+                                                Prob > F          =          .
+                                                R-squared         =     0.3463
+                                                Root MSE          =     .40406
+
+                             (Std. Err. adjusted for 45,077 clusters in cpsid)
+------------------------------------------------------------------------------
+             |               Robust
+      worked |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+       treat |   .2551134   .0039888    63.96   0.000     .2472952    .2629315
+        post |  -.0178144   .0029253    -6.09   0.000     -.023548   -.0120808
+treat_x_post |    .035236   .0051226     6.88   0.000     .0251956    .0452765
+     adjginc |  -5.36e-09   2.82e-11  -190.00   0.000    -5.41e-09   -5.30e-09
+       _cons |   .5403558   .0027847   194.04   0.000     .5348977    .5458139
+------------------------------------------------------------------------------
+(est3 stored)
+
+Linear regression                               Number of obs     =     46,052
+                                                F(4, 30752)       =     872.78
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.0941
+                                                Root MSE          =     13.574
+
+                             (Std. Err. adjusted for 30,753 clusters in cpsid)
+------------------------------------------------------------------------------
+             |               Robust
+  hrs_worked |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+       treat |   3.631058   .1503886    24.14   0.000     3.336291    3.925826
+        post |  -.7480061   .1954091    -3.83   0.000    -1.131016   -.3649961
+treat_x_post |    .505623   .2541665     1.99   0.047     .0074461      1.0038
+     adjginc |   .0001225   2.65e-06    46.17   0.000     .0001173    .0001277
+       _cons |   35.94031   .1413778   254.21   0.000     35.66321    36.21742
+------------------------------------------------------------------------------
+(est4 stored)
+
+{
+\def\sym#1{\ifmmode^{#1}\else\(^{#1}\)\fi}
+\begin{tabular}{l*{4}{c}}
+\hline\hline
+            &\multicolumn{1}{c}{(1)}&\multicolumn{1}{c}{(2)}&\multicolumn{1}{c}{(3)}&\multicolumn{1}{c}{(4)}\\
+            &\multicolumn{1}{c}{worked}&\multicolumn{1}{c}{hrs\_worked}&\multicolumn{1}{c}{worked}&\multicolumn{1}{c}{hrs\_worked}\\
+\hline
+treat       &       0.437\sym{***}&       5.391\sym{***}&       0.255\sym{***}&       3.631\sym{***}\\
+            &   (0.00376)         &     (0.152)         &   (0.00399)         &     (0.150)         \\
+[1em]
+post        &     -0.0125\sym{***}&      -0.436\sym{*}  &     -0.0178\sym{***}&      -0.748\sym{***}\\
+            &   (0.00342)         &     (0.203)         &   (0.00293)         &     (0.195)         \\
+[1em]
+treat\_x\_post&      0.0291\sym{***}&       0.541\sym{*}  &      0.0352\sym{***}&       0.506\sym{*}  \\
+            &   (0.00551)         &     (0.261)         &   (0.00512)         &     (0.254)         \\
+[1em]
+adjginc     &                     &                     &   -5.36e-09\sym{***}&    0.000122\sym{***}\\
+            &                     &                     &  (2.82e-11)         &(0.00000265)         \\
+[1em]
+\_cons      &       0.358\sym{***}&       39.53\sym{***}&       0.540\sym{***}&       35.94\sym{***}\\
+            &   (0.00235)         &     (0.115)         &   (0.00278)         &     (0.141)         \\
+\hline
+\(N\)       &       95197         &       46056         &       95192         &       46052         \\
+\hline\hline
+\multicolumn{5}{l}{\footnotesize Standard errors in parentheses}\\
+\multicolumn{5}{l}{\footnotesize \sym{*} \(p<0.05\), \sym{**} \(p<0.01\), \sym{***} \(p<0.001\)}\\
+\end{tabular}
+}
+
+----------------------------------------------------------------------------
+                      (1)             (2)             (3)             (4)   
+                   worked      hrs_worked          worked      hrs_worked   
+----------------------------------------------------------------------------
+treat               0.437***        5.391***        0.255***        3.631***
+                (0.00376)         (0.152)       (0.00399)         (0.150)   
+
+post              -0.0125***       -0.436*        -0.0178***       -0.748***
+                (0.00342)         (0.203)       (0.00293)         (0.195)   
+
+treat_x_post       0.0291***        0.541*         0.0352***        0.506*  
+                (0.00551)         (0.261)       (0.00512)         (0.254)   
+
+adjginc                                         -5.36e-09***     0.000122***
+                                               (2.82e-11)    (0.00000265)   
+
+_cons               0.358***        39.53***        0.540***        35.94***
+                (0.00235)         (0.115)       (0.00278)         (0.141)   
+----------------------------------------------------------------------------
+N                   95197           46056           95192           46052   
+----------------------------------------------------------------------------
+Standard errors in parentheses
+* p<0.05, ** p<0.01, *** p<0.001
+note: female omitted because of collinearity
+
+Linear regression                               Number of obs     =     95,192
+                                                F(6, 45076)       =          .
+                                                Prob > F          =          .
+                                                R-squared         =     0.3999
+                                                Root MSE          =     .38716
+
+                             (Std. Err. adjusted for 45,077 clusters in cpsid)
+------------------------------------------------------------------------------
+             |               Robust
+      worked |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+       treat |   .1560929   .0070281    22.21   0.000     .1423176    .1698681
+        post |  -.0160715   .0028077    -5.72   0.000    -.0215746   -.0105683
+treat_x_post |   .0334217   .0049763     6.72   0.000      .023668    .0431753
+     adjginc |  -3.33e-09   4.57e-11   -72.92   0.000    -3.42e-09   -3.24e-09
+      female |          0  (omitted)
+     married |  -.0431616   .0049944    -8.64   0.000    -.0529508   -.0333724
+      nchild |   .0413306   .0026762    15.44   0.000     .0360851    .0465761
+less_hi_schl |  -.3113764   .0048372   -64.37   0.000    -.3208574   -.3018954
+       _cons |   .6489097   .0036966   175.54   0.000     .6416642    .6561552
+------------------------------------------------------------------------------
+(est1 stored)
+note: female omitted because of collinearity
+
+Linear regression                               Number of obs     =     46,052
+                                                F(7, 30752)       =     610.88
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.1149
+                                                Root MSE          =     13.418
+
+                             (Std. Err. adjusted for 30,753 clusters in cpsid)
+------------------------------------------------------------------------------
+             |               Robust
+  hrs_worked |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+       treat |   1.207586   .2539994     4.75   0.000     .7097372    1.705436
+        post |  -.8746941   .1915914    -4.57   0.000    -1.250221   -.4991671
+treat_x_post |   .6756233   .2505012     2.70   0.007     .1846306    1.166616
+     adjginc |   .0000957   2.86e-06    33.43   0.000     .0000901    .0001013
+      female |          0  (omitted)
+     married |   2.049172    .197111    10.40   0.000     1.662826    2.435517
+      nchild |   .7227543   .1006454     7.18   0.000     .5254851    .9200234
+less_hi_schl |  -5.532215     .22419   -24.68   0.000    -5.971637   -5.092793
+       _cons |   36.83533   .1549518   237.72   0.000     36.53162    37.13904
+------------------------------------------------------------------------------
+(est2 stored)
+
+{
+\def\sym#1{\ifmmode^{#1}\else\(^{#1}\)\fi}
+\begin{tabular}{l*{2}{c}}
+\hline\hline
+            &\multicolumn{1}{c}{(1)}&\multicolumn{1}{c}{(2)}\\
+            &\multicolumn{1}{c}{worked}&\multicolumn{1}{c}{hrs\_worked}\\
+\hline
+treat       &       0.156\sym{***}&       1.208\sym{***}\\
+            &   (0.00703)         &     (0.254)         \\
+[1em]
+post        &     -0.0161\sym{***}&      -0.875\sym{***}\\
+            &   (0.00281)         &     (0.192)         \\
+[1em]
+treat\_x\_post&      0.0334\sym{***}&       0.676\sym{**} \\
+            &   (0.00498)         &     (0.251)         \\
+[1em]
+adjginc     &   -3.33e-09\sym{***}&   0.0000957\sym{***}\\
+            &  (4.57e-11)         &(0.00000286)         \\
+[1em]
+female      &           0         &           0         \\
+            &         (.)         &         (.)         \\
+[1em]
+married     &     -0.0432\sym{***}&       2.049\sym{***}\\
+            &   (0.00499)         &     (0.197)         \\
+[1em]
+nchild      &      0.0413\sym{***}&       0.723\sym{***}\\
+            &   (0.00268)         &     (0.101)         \\
+[1em]
+less\_hi\_schl&      -0.311\sym{***}&      -5.532\sym{***}\\
+            &   (0.00484)         &     (0.224)         \\
+[1em]
+\_cons      &       0.649\sym{***}&       36.84\sym{***}\\
+            &   (0.00370)         &     (0.155)         \\
+\hline
+\(N\)       &       95192         &       46052         \\
+\hline\hline
+\multicolumn{3}{l}{\footnotesize Standard errors in parentheses}\\
+\multicolumn{3}{l}{\footnotesize \sym{*} \(p<0.05\), \sym{**} \(p<0.01\), \sym{***} \(p<0.001\)}\\
+\end{tabular}
+}
+
+--------------------------------------------
+                      (1)             (2)   
+                   worked      hrs_worked   
+--------------------------------------------
+treat               0.156***        1.208***
+                (0.00703)         (0.254)   
+
+post              -0.0161***       -0.875***
+                (0.00281)         (0.192)   
+
+treat_x_post       0.0334***        0.676** 
+                (0.00498)         (0.251)   
+
+adjginc         -3.33e-09***    0.0000957***
+               (4.57e-11)    (0.00000286)   
+
+female                  0               0   
+                      (.)             (.)   
+
+married           -0.0432***        2.049***
+                (0.00499)         (0.197)   
+
+nchild             0.0413***        0.723***
+                (0.00268)         (0.101)   
+
+less_hi_schl       -0.311***       -5.532***
+                (0.00484)         (0.224)   
+
+_cons               0.649***        36.84***
+                (0.00370)         (0.155)   
+--------------------------------------------
+N                   95192           46052   
+--------------------------------------------
+Standard errors in parentheses
+* p<0.05, ** p<0.01, *** p<0.001
+(185,749 observations deleted)
+
+Linear regression                               Number of obs     =    103,487
+                                                F(3, 49183)       =    2161.86
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.0832
+                                                Root MSE          =       .469
+
+                             (Std. Err. adjusted for 49,184 clusters in cpsid)
+------------------------------------------------------------------------------
+             |               Robust
+      worked |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+       treat |    .287832   .0037178    77.42   0.000     .2805451     .295119
+        post |  -.0029281   .0031495    -0.93   0.353    -.0091012    .0032451
+treat_x_post |   .0320609   .0054838     5.85   0.000     .0213126    .0428093
+       _cons |   .2980431   .0021935   135.88   0.000     .2937438    .3023424
+------------------------------------------------------------------------------
+(est1 stored)
+
+Linear regression                               Number of obs     =     41,351
+                                                F(3, 28046)       =       9.41
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.0006
+                                                Root MSE          =     13.336
+
+                             (Std. Err. adjusted for 28,047 clusters in cpsid)
+------------------------------------------------------------------------------
+             |               Robust
+  hrs_worked |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+       treat |   .2242781   .1552782     1.44   0.149    -.0800747     .528631
+        post |  -.8491617   .1948253    -4.36   0.000    -1.231029   -.4672946
+treat_x_post |   .4787634   .2553212     1.88   0.061    -.0216787    .9792054
+       _cons |   35.56854   .1170774   303.80   0.000     35.33906    35.79802
+------------------------------------------------------------------------------
+(est2 stored)
+
+Linear regression                               Number of obs     =    103,486
+                                                F(3, 49183)       =          .
+                                                Prob > F          =          .
+                                                R-squared         =     0.1982
+                                                Root MSE          =     .43862
+
+                             (Std. Err. adjusted for 49,184 clusters in cpsid)
+------------------------------------------------------------------------------
+             |               Robust
+      worked |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+       treat |   .1434284   .0040846    35.11   0.000     .1354226    .1514342
+        post |  -.0137908    .002809    -4.91   0.000    -.0192964   -.0082852
+treat_x_post |   .0434088   .0053225     8.16   0.000     .0329765     .053841
+     adjginc |  -4.39e-09   2.77e-11  -158.32   0.000    -4.44e-09   -4.34e-09
+       _cons |   .4424727   .0027394   161.52   0.000     .4371035    .4478419
+------------------------------------------------------------------------------
+(est3 stored)
+
+Linear regression                               Number of obs     =     41,350
+                                                F(4, 28046)       =     275.40
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.0373
+                                                Root MSE          =     13.089
+
+                             (Std. Err. adjusted for 28,047 clusters in cpsid)
+------------------------------------------------------------------------------
+             |               Robust
+  hrs_worked |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+       treat |   .9127378   .1551787     5.88   0.000       .60858    1.216896
+        post |  -.8862263   .1887067    -4.70   0.000    -1.256101   -.5163519
+treat_x_post |   .4195672    .250403     1.68   0.094    -.0712349    .9103692
+     adjginc |    .000143   4.35e-06    32.84   0.000     .0001344    .0001515
+       _cons |   33.74001   .1306718   258.20   0.000     33.48389    33.99614
+------------------------------------------------------------------------------
+(est4 stored)
+
+{
+\def\sym#1{\ifmmode^{#1}\else\(^{#1}\)\fi}
+\begin{tabular}{l*{4}{c}}
+\hline\hline
+            &\multicolumn{1}{c}{(1)}&\multicolumn{1}{c}{(2)}&\multicolumn{1}{c}{(3)}&\multicolumn{1}{c}{(4)}\\
+            &\multicolumn{1}{c}{worked}&\multicolumn{1}{c}{hrs\_worked}&\multicolumn{1}{c}{worked}&\multicolumn{1}{c}{hrs\_worked}\\
+\hline
+treat       &       0.288\sym{***}&       0.224         &       0.143\sym{***}&       0.913\sym{***}\\
+            &   (0.00372)         &     (0.155)         &   (0.00408)         &     (0.155)         \\
+[1em]
+post        &    -0.00293         &      -0.849\sym{***}&     -0.0138\sym{***}&      -0.886\sym{***}\\
+            &   (0.00315)         &     (0.195)         &   (0.00281)         &     (0.189)         \\
+[1em]
+treat\_x\_post&      0.0321\sym{***}&       0.479         &      0.0434\sym{***}&       0.420         \\
+            &   (0.00548)         &     (0.255)         &   (0.00532)         &     (0.250)         \\
+[1em]
+adjginc     &                     &                     &   -4.39e-09\sym{***}&    0.000143\sym{***}\\
+            &                     &                     &  (2.77e-11)         &(0.00000435)         \\
+[1em]
+\_cons      &       0.298\sym{***}&       35.57\sym{***}&       0.442\sym{***}&       33.74\sym{***}\\
+            &   (0.00219)         &     (0.117)         &   (0.00274)         &     (0.131)         \\
+\hline
+\(N\)       &      103487         &       41351         &      103486         &       41350         \\
+\hline\hline
+\multicolumn{5}{l}{\footnotesize Standard errors in parentheses}\\
+\multicolumn{5}{l}{\footnotesize \sym{*} \(p<0.05\), \sym{**} \(p<0.01\), \sym{***} \(p<0.001\)}\\
+\end{tabular}
+}
+
+----------------------------------------------------------------------------
+                      (1)             (2)             (3)             (4)   
+                   worked      hrs_worked          worked      hrs_worked   
+----------------------------------------------------------------------------
+treat               0.288***        0.224           0.143***        0.913***
+                (0.00372)         (0.155)       (0.00408)         (0.155)   
+
+post             -0.00293          -0.849***      -0.0138***       -0.886***
+                (0.00315)         (0.195)       (0.00281)         (0.189)   
+
+treat_x_post       0.0321***        0.479          0.0434***        0.420   
+                (0.00548)         (0.255)       (0.00532)         (0.250)   
+
+adjginc                                         -4.39e-09***     0.000143***
+                                               (2.77e-11)    (0.00000435)   
+
+_cons               0.298***        35.57***        0.442***        33.74***
+                (0.00219)         (0.117)       (0.00274)         (0.131)   
+----------------------------------------------------------------------------
+N                  103487           41351          103486           41350   
+----------------------------------------------------------------------------
+Standard errors in parentheses
+* p<0.05, ** p<0.01, *** p<0.001
+note: female omitted because of collinearity
+
+Linear regression                               Number of obs     =    103,486
+                                                F(6, 49183)       =          .
+                                                Prob > F          =          .
+                                                R-squared         =     0.2635
+                                                Root MSE          =     .42036
+
+                             (Std. Err. adjusted for 49,184 clusters in cpsid)
+------------------------------------------------------------------------------
+             |               Robust
+      worked |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+       treat |    .134868   .0066635    20.24   0.000     .1218076    .1479285
+        post |  -.0115154   .0027108    -4.25   0.000    -.0168286   -.0062022
+treat_x_post |   .0337891   .0051712     6.53   0.000     .0236535    .0439247
+     adjginc |  -1.99e-09   3.78e-11   -52.58   0.000    -2.06e-09   -1.91e-09
+      female |          0  (omitted)
+     married |  -.0020266   .0042699    -0.47   0.635    -.0103957    .0063425
+      nchild |  -.0146042   .0028861    -5.06   0.000     -.020261   -.0089474
+less_hi_schl |  -.3362868   .0043993   -76.44   0.000    -.3449095    -.327664
+       _cons |    .537948   .0036531   147.26   0.000     .5307879     .545108
+------------------------------------------------------------------------------
+(est1 stored)
+note: female omitted because of collinearity
+
+Linear regression                               Number of obs     =     41,350
+                                                F(7, 28046)       =     244.91
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.0624
+                                                Root MSE          =     12.918
+
+                             (Std. Err. adjusted for 28,047 clusters in cpsid)
+------------------------------------------------------------------------------
+             |               Robust
+  hrs_worked |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+       treat |   1.917825   .2510147     7.64   0.000     1.425824    2.409826
+        post |  -.8357473   .1828171    -4.57   0.000    -1.194078   -.4774169
+treat_x_post |   .1809244   .2472904     0.73   0.464    -.3037769    .6656257
+     adjginc |   .0001469   4.92e-06    29.90   0.000     .0001373    .0001566
+      female |          0  (omitted)
+     married |   1.978974   .1706965    11.59   0.000       1.6444    2.313547
+      nchild |  -1.017082   .1147528    -8.86   0.000    -1.242003    -.792161
+less_hi_schl |  -5.589968   .2554173   -21.89   0.000    -6.090598   -5.089338
+       _cons |   33.57887   .1646713   203.91   0.000     33.25611    33.90163
+------------------------------------------------------------------------------
+(est2 stored)
+
+{
+\def\sym#1{\ifmmode^{#1}\else\(^{#1}\)\fi}
+\begin{tabular}{l*{2}{c}}
+\hline\hline
+            &\multicolumn{1}{c}{(1)}&\multicolumn{1}{c}{(2)}\\
+            &\multicolumn{1}{c}{worked}&\multicolumn{1}{c}{hrs\_worked}\\
+\hline
+treat       &       0.135\sym{***}&       1.918\sym{***}\\
+            &   (0.00666)         &     (0.251)         \\
+[1em]
+post        &     -0.0115\sym{***}&      -0.836\sym{***}\\
+            &   (0.00271)         &     (0.183)         \\
+[1em]
+treat\_x\_post&      0.0338\sym{***}&       0.181         \\
+            &   (0.00517)         &     (0.247)         \\
+[1em]
+adjginc     &   -1.99e-09\sym{***}&    0.000147\sym{***}\\
+            &  (3.78e-11)         &(0.00000492)         \\
+[1em]
+female      &           0         &           0         \\
+            &         (.)         &         (.)         \\
+[1em]
+married     &    -0.00203         &       1.979\sym{***}\\
+            &   (0.00427)         &     (0.171)         \\
+[1em]
+nchild      &     -0.0146\sym{***}&      -1.017\sym{***}\\
+            &   (0.00289)         &     (0.115)         \\
+[1em]
+less\_hi\_schl&      -0.336\sym{***}&      -5.590\sym{***}\\
+            &   (0.00440)         &     (0.255)         \\
+[1em]
+\_cons      &       0.538\sym{***}&       33.58\sym{***}\\
+            &   (0.00365)         &     (0.165)         \\
+\hline
+\(N\)       &      103486         &       41350         \\
+\hline\hline
+\multicolumn{3}{l}{\footnotesize Standard errors in parentheses}\\
+\multicolumn{3}{l}{\footnotesize \sym{*} \(p<0.05\), \sym{**} \(p<0.01\), \sym{***} \(p<0.001\)}\\
+\end{tabular}
+}
+
+--------------------------------------------
+                      (1)             (2)   
+                   worked      hrs_worked   
+--------------------------------------------
+treat               0.135***        1.918***
+                (0.00666)         (0.251)   
+
+post              -0.0115***       -0.836***
+                (0.00271)         (0.183)   
+
+treat_x_post       0.0338***        0.181   
+                (0.00517)         (0.247)   
+
+adjginc         -1.99e-09***     0.000147***
+               (3.78e-11)    (0.00000492)   
+
+female                  0               0   
+                      (.)             (.)   
+
+married          -0.00203           1.979***
+                (0.00427)         (0.171)   
+
+nchild            -0.0146***       -1.017***
+                (0.00289)         (0.115)   
+
+less_hi_schl       -0.336***       -5.590***
+                (0.00440)         (0.255)   
+
+_cons               0.538***        33.58***
+                (0.00365)         (0.165)   
+--------------------------------------------
+N                  103486           41350   
+--------------------------------------------
+Standard errors in parentheses
+* p<0.05, ** p<0.01, *** p<0.001
+
+. 
+. 
+. 
+. cap log close
