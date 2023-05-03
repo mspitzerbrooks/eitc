@@ -71,7 +71,7 @@ gen treat_x_post = treat*post
 	esttab, se
 	
 // with all controls
-	local controls adjginc female married nchild
+	local controls adjginc female married nchild less_hi_schl
 
 	eststo clear
 
@@ -84,9 +84,11 @@ gen treat_x_post = treat*post
 	esttab, tex se
 	esttab, se
 
-// females only
+forval i = 0/1 {
+	
+// females/males only
 preserve
-keep if female == 1
+keep if female == `i'
 
 // basic regressions
 
@@ -112,7 +114,7 @@ keep if female == 1
 	esttab, se
 	
 // with all controls
-	local controls adjginc female married nchild
+	local controls adjginc female married nchild less_hi_schl
 
 	eststo clear
 
@@ -126,5 +128,9 @@ keep if female == 1
 	esttab, se
 	
 restore
+
+}
+
+
 
 cap log close

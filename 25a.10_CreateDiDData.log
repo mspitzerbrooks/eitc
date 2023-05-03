@@ -2,7 +2,7 @@
       name:  <unnamed>
        log:  /Users/matthewspitzer/Desktop/EITC/Programs/25a.10_CreateDiDData.log
   log type:  text
- opened on:   2 May 2023, 17:19:11
+ opened on:   2 May 2023, 19:19:11
 
 . 
 . // bring in data
@@ -45,10 +45,11 @@
 Data                               wide   ->   long
 -----------------------------------------------------------------------------
 Number of obs.                      378   ->    1134
-Number of variables                  48   ->      23
+Number of variables                  51   ->      24
 j variable (3 values)                     ->   year
 xij variables:
                 cpsid92 cpsid93 cpsid94   ->   cpsid
+                   educ92 educ93 educ94   ->   educ
        filestat92 filestat93 filestat94   ->   filestat
           eitcred92 eitcred93 eitcred94   ->   eitcred
           adjginc92 adjginc93 adjginc94   ->   adjginc
@@ -85,13 +86,19 @@ xij variables:
   +---------------------------------------------------+
 
 . 
+. // make variable for less than high school
+. gen less_hi_schl = 0
+
+. replace less_hi_schl = 1 if educ<=71
+(118 real changes made)
+
+. 
 . // save
 . isid year cpsidp
 
 . qui compress
 
 . save "/Users/matthewspitzer/Desktop/EITC/Output/cps00010_did.dta", replace
-(note: file /Users/matthewspitzer/Desktop/EITC/Output/cps00010_did.dta not found)
 file /Users/matthewspitzer/Desktop/EITC/Output/cps00010_did.dta saved
 
 . 

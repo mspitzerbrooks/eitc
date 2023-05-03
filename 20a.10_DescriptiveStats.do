@@ -40,14 +40,6 @@ tabulate these four
 drop if cpsidp == 0 // can't use these (see data doc for why)
 isid year cpsidp
 
-/*
-// create single identifier
-tostring serial, gen(serial_str)
-tostring pernum, gen(pernum_str)
-gen serial_pernum = serial_str + "_" + pernum_str
-drop serial_str pernum_str
-isid year serial_pernum
-*/
 
 // create 2 digit year variable
 tostring year, replace
@@ -62,9 +54,8 @@ keep if inlist(year,92,93,94) // only these two years for now, can expand later
 	// (for comparison with table in paper)
 gen adjginc13 = 1.58*adjginc // rate from BLS March 1994 to March 2013
 
-
 // keep only variables needed
-local keep_vars cpsid year cpsidp filestat eitcred adjginc adjginc13 nchild sex marst gqtype relate ahrsworkt majoract intenfwk
+local keep_vars cpsid year cpsidp educ filestat eitcred adjginc adjginc13 nchild sex marst gqtype relate ahrsworkt majoract intenfwk
 keep `keep_vars'
 
 local id_vars year cpsidp

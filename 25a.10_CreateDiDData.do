@@ -24,6 +24,10 @@ gen post = 0
 replace post = 1 if year==94
 tablist year post, s(v)
 
+// make variable for less than high school
+gen less_hi_schl = 0
+replace less_hi_schl = 1 if educ<=71
+
 // save
 isid year cpsidp
 qui compress

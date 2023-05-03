@@ -2,7 +2,7 @@
       name:  <unnamed>
        log:  /Users/matthewspitzer/Desktop/EITC/Programs/20a.10_DescriptiveStats.log
   log type:  text
- opened on:   2 May 2023, 16:41:11
+ opened on:   2 May 2023, 19:04:47
 
 . 
 . // bring in data
@@ -70,14 +70,6 @@ year month cpsid asecflag asecwth gqtype pernum cpsidp asecwt relate age sex rac
 . isid year cpsidp
 
 . 
-. /*
-> // create single identifier
-> tostring serial, gen(serial_str)
-> tostring pernum, gen(pernum_str)
-> gen serial_pernum = serial_str + "_" + pernum_str
-> drop serial_str pernum_str
-> isid year serial_pernum
-> */
 . 
 . // create 2 digit year variable
 . tostring year, replace
@@ -112,10 +104,9 @@ year_2 has all characters numeric; replaced as byte
 (7 missing values generated)
 
 . 
-. 
 . // keep only variables needed
-. local keep_vars cpsid year cpsidp filestat eitcred adjginc adjginc13 nchild sex marst gqtype relate ahrsworkt majoract in
-> tenfwk
+. local keep_vars cpsid year cpsidp educ filestat eitcred adjginc adjginc13 nchild sex marst gqtype relate ahrsworkt majora
+> ct intenfwk
 
 . keep `keep_vars'
 
@@ -133,10 +124,11 @@ year_2 has all characters numeric; replaced as byte
 Data                               long   ->   wide
 -----------------------------------------------------------------------------
 Number of obs.                   430598   ->  322408
-Number of variables                  15   ->      40
+Number of variables                  16   ->      43
 j variable (3 values)              year   ->   (dropped)
 xij variables:
                                   cpsid   ->   cpsid92 cpsid93 cpsid94
+                                   educ   ->   educ92 educ93 educ94
                                filestat   ->   filestat92 filestat93 filestat94
                                 eitcred   ->   eitcred92 eitcred93 eitcred94
                                 adjginc   ->   adjginc92 adjginc93 adjginc94
@@ -473,7 +465,6 @@ Married, spouse present |     12,707       92.86       92.86
 . 
 . // save the data
 . save "/Users/matthewspitzer/Desktop/EITC/Output/cps00010_wide.dta", replace
-(note: file /Users/matthewspitzer/Desktop/EITC/Output/cps00010_wide.dta not found)
 file /Users/matthewspitzer/Desktop/EITC/Output/cps00010_wide.dta saved
 
 . 
