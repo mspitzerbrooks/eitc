@@ -1,7 +1,8 @@
 cap log close
 global path_mahdi = "//wsl$/Ubuntu/home/mahdi/Documents/eitc"
-log using "$path_mahdi/mahdi_35a.10_DiDRegressions.log", replace 
+cd $mahdi
 
+log using "$path_mahdi/mahdi_35a.10_DiDRegressions_marstANDadjgincBounded.log", replace 
 
 
 // bring in data
@@ -32,11 +33,7 @@ replace female = 1 if sex==2
 replace female = 0 if sex==1
 tab treat female if !mi(treat), 
 
-// by married
-gen married = .
-replace married = 1 if inlist(marst,1,2)
-replace married = 0 if !inlist(marst,1,2)
-tab treat married if !mi(treat), 
+
 
 // create outcome variables
 
@@ -53,7 +50,7 @@ gen treat_x_post = treat*post
 // basic regressions
 
 	eststo clear
-
+/*
 	// extensive margin
 	eststo: reg worked treat post treat_x_post, robust cluster(cpsid)
 
@@ -86,7 +83,7 @@ gen treat_x_post = treat*post
 
 	esttab, tex se
 	esttab, se
-
+*/
 forval i = 0/1 {
 	
 // females/males only
@@ -108,14 +105,15 @@ keep if female == `i'
 	local controls adjginc 
 
 	// extensive margin
-	eststo: reg worked treat post treat_x_post `controls', robust cluster(cpsid)
+	eststo mhd_ex_`i': reg worked treat post treat_x_post `controls', robust cluster(cpsid)
 
 	// intensive margin
-	eststo: reg hrs_worked treat post treat_x_post `controls', robust cluster(cpsid)
+	eststo mhd_in_`i': reg hrs_worked treat post treat_x_post `controls', robust cluster(cpsid)
 
-	esttab, tex se
+	esttab mhd_ex_`i' mhd_in_`i' using mhd_`i'.tex, replace tex se title(Main Result for female ==`i' \label{tab::mhd_`i'})
 	esttab, se
-	
+eststo clear
+	/*	
 // with all controls
 	local controls adjginc female married nchild less_hi_schl
 
@@ -129,7 +127,7 @@ keep if female == `i'
 
 	esttab, tex se
 	esttab, se
-	
+*/	
 restore
 
 }
