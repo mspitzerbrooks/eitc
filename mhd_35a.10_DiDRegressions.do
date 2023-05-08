@@ -18,10 +18,10 @@ gen serial = substr(serial_pernum,1,5)
 */
 
 // more missing value cleaning
-mvdecode adjginc??, mv(99999)
-foreach var of varlist adjginc?? {
-	replace `var' = . if `var' < 0
-	}
+//mvdecode adjginc??, mv(99999)
+//foreach var of varlist adjginc?? {
+//	replace `var' = . if `var' < 0
+//	}
 
 // how many households
 distinct cpsid if treat==1
@@ -50,14 +50,15 @@ gen treat_x_post = treat*post
 // basic regressions
 
 	eststo clear
-/*
+
 	// extensive margin
-	eststo: reg worked treat post treat_x_post, robust cluster(cpsid)
+	//eststo: reg worked treat post treat_x_post, robust cluster(cpsid)
 
 	// intensive margin
 	eststo: reg hrs_worked  treat post treat_x_post, robust cluster(cpsid)
-	
+	eststo clear
 
+/*
 // only controlling for income	
 	local controls adjginc 
 
@@ -95,38 +96,34 @@ keep if female == `i'
 	eststo clear
 
 	// extensive margin
-	eststo: reg worked treat post treat_x_post, robust cluster(cpsid)
+	//eststo: reg worked treat post treat_x_post, robust cluster(cpsid)
 
 	// intensive margin
-	eststo: reg hrs_worked  treat post treat_x_post, robust cluster(cpsid)
-	
+	eststo mhd0_`i': reg hrs_worked  treat post treat_x_post, robust cluster(cpsid)
+
 
 // only controlling for income	
 	local controls adjginc 
 
 	// extensive margin
-	eststo mhd_ex_`i': reg worked treat post treat_x_post `controls', robust cluster(cpsid)
+	//eststo mhd_ex_`i': reg worked treat post treat_x_post `controls', robust cluster(cpsid)
 
 	// intensive margin
-	eststo mhd_in_`i': reg hrs_worked treat post treat_x_post `controls', robust cluster(cpsid)
-
-	esttab mhd_ex_`i' mhd_in_`i' using mhd_`i'.tex, replace tex se title(Main Result for female ==`i' \label{tab::mhd_`i'})
-	esttab, se
-eststo clear
-	/*	
+	eststo mhd1_`i': reg hrs_worked treat post treat_x_post `controls', robust cluster(cpsid)
+		
 // with all controls
-	local controls adjginc female married nchild less_hi_schl
-
-	eststo clear
+	local controls adjginc nchild less_hi_schl
 
 	// extensive margin
-	eststo: reg worked treat post treat_x_post `controls', robust cluster(cpsid)
+	//eststo: reg worked treat post treat_x_post `controls', robust cluster(cpsid)
 
 	// intensive margin
-	eststo: reg hrs_worked treat post treat_x_post `controls', robust cluster(cpsid)
-
+	eststo mhd2_`i': reg hrs_worked treat post treat_x_post `controls', robust cluster(cpsid)
 	esttab, tex se
 	esttab, se
+
+	esttab mhd0_`i' mhd1_`i' mhd2_`i'  using eitc/mhd_`i'.tex, replace tex se title(Main Result for female ==`i' \label{tab::mhd_`i'})
+eststo clear
 */	
 restore
 
