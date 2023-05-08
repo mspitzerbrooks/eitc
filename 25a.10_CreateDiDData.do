@@ -13,6 +13,10 @@ drop treat
 rename treat_did treat
 keep if !mi(treat)
 
+// restrict to families with at least 2 children
+drop if nchild94==1
+tab nchild94,m
+
 // reshape long
 reshape long
 

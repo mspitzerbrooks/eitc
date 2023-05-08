@@ -1,8 +1,8 @@
----------------------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
       name:  <unnamed>
        log:  /Users/matthewspitzer/Desktop/EITC/Programs/25a.10_CreateDiDData.log
   log type:  text
- opened on:   2 May 2023, 19:19:11
+ opened on:   8 May 2023, 16:46:37
 
 . 
 . // bring in data
@@ -38,13 +38,30 @@
 (13706 observations deleted)
 
 . 
+. // restrict to families with at least 2 children
+. drop if nchild94==1
+(178 observations deleted)
+
+. tab nchild94,m
+
+         94 nchild |      Freq.     Percent        Cum.
+-------------------+-----------------------------------
+                 2 |        136       68.00       68.00
+                 3 |         47       23.50       91.50
+                 4 |         13        6.50       98.00
+                 5 |          3        1.50       99.50
+                 8 |          1        0.50      100.00
+-------------------+-----------------------------------
+             Total |        200      100.00
+
+. 
 . // reshape long
 . reshape long
 (note: j = 92 93 94)
 
 Data                               wide   ->   long
 -----------------------------------------------------------------------------
-Number of obs.                      378   ->    1134
+Number of obs.                      200   ->     600
 Number of variables                  51   ->      24
 j variable (3 values)                     ->   year
 xij variables:
@@ -67,22 +84,22 @@ xij variables:
 . 
 . // keep only years of interest
 . keep if inlist(year,93,94)
-(378 observations deleted)
+(200 observations deleted)
 
 . 
 . // make post variable
 . gen post = 0
 
 . replace post = 1 if year==94
-(378 real changes made)
+(200 real changes made)
 
 . tablist year post, s(v)
 
   +---------------------------------------------------+
   | year   post   _Freq_   _Perc_   _CFreq_   _CPerc_ |
   |---------------------------------------------------|
-  |   93      0      378    50.00       378     50.00 |
-  |   94      1      378    50.00       756    100.00 |
+  |   93      0      200    50.00       200     50.00 |
+  |   94      1      200    50.00       400    100.00 |
   +---------------------------------------------------+
 
 . 
@@ -90,7 +107,7 @@ xij variables:
 . gen less_hi_schl = 0
 
 . replace less_hi_schl = 1 if educ<=71
-(118 real changes made)
+(64 real changes made)
 
 . 
 . // save
