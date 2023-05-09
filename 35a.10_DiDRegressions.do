@@ -46,7 +46,19 @@ tablist treat married if !mi(treat), s(v)
 
 // create interaction term
 gen treat_x_post = treat*post
-	
+
+// label variables
+label var treat "Treated"
+label var post "Post"
+label var treat_x_post "Treated X Post"
+label var adjginc "Income"
+label var worked "Worked"
+label var hrs_worked "Hours worked"
+label var female "Female"
+label var married "Married"
+label var nchild "No. of kids"
+label var less_hi_schl "High school"
+
 // basic regressions
 
 	eststo clear
@@ -67,9 +79,9 @@ gen treat_x_post = treat*post
 	// intensive margin
 	eststo: reg hrs_worked treat post treat_x_post `controls', robust cluster(cpsid)
 
-	esttab, tex se
-	esttab, se
-	
+	esttab, tex se label
+	esttab, se label 
+
 // with all controls
 	local controls adjginc female married nchild less_hi_schl
 
@@ -81,8 +93,8 @@ gen treat_x_post = treat*post
 	// intensive margin
 	eststo: reg hrs_worked treat post treat_x_post `controls', robust cluster(cpsid)
 
-	esttab, tex se
-	esttab, se
+	esttab, tex se label
+	esttab, se label
 
 forval i = 0/1 {
 	
@@ -110,8 +122,8 @@ keep if female == `i'
 	// intensive margin
 	eststo: reg hrs_worked treat post treat_x_post `controls', robust cluster(cpsid)
 
-	esttab, tex se
-	esttab, se
+	esttab, tex se label
+	esttab, se label
 	
 // with all controls
 	local controls adjginc female married nchild less_hi_schl
@@ -124,8 +136,8 @@ keep if female == `i'
 	// intensive margin
 	eststo: reg hrs_worked treat post treat_x_post `controls', robust cluster(cpsid)
 
-	esttab, tex se
-	esttab, se
+	esttab, tex se label
+	esttab, se label
 	
 restore
 
